@@ -41,9 +41,9 @@ def parseASPackage(s, location, tokens):
         print('parseASPackage[{0}] @ loc({1})'.format(tokens.name, location))
     pkg = ASPackage()
     pkg.name = tokens.name
-    if pkg.imports:
+    if tokens.imports:
         pkg.imports += tokens.imports.asList()
-    if pkg.use_namespace:
+    if tokens.use_namespace:
         pkg.use_namespace += tokens.use_namespace.asList()
     # 定义的类
     if tokens.class_:
@@ -295,7 +295,7 @@ METATAG = (
 BLOCK = Suppress(nestedExpr("{","}"))
 # BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG('metatag') ^ INCLUDE_DEFINITION
 # 加上静态初始化块
-BASE_BLOCK = USE_NAMESPACE ^ METATAG('metatag') ^ INCLUDE_DEFINITION ^ BLOCK
+BASE_BLOCK = USE_NAMESPACE ^ INCLUDE_DEFINITION ^ BLOCK
 # 方法相关的语法
 METHOD_MODIFIER = (
     Optional(KEYWORDS['static']('static'))
