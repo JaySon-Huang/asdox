@@ -1,4 +1,4 @@
-#!/usr/bin/env
+#!/usr/bin/env python
 #encoding=utf-8
 
 # Copyright (c) 2008, Michael Ramirez
@@ -31,7 +31,7 @@
 import os
 import sys
 import unittest
-sys.path.append( os.path.abspath('../') )
+sys.path.append(os.path.abspath('./'))
 from asdox import asModel,asBuilder
 
 class BaseTestCase(unittest.TestCase):
