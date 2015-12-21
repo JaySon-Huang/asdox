@@ -30,63 +30,70 @@ sys.path.append( os.path.abspath('../') )
 from asdox import asModel
 
 class ASClassTestCase(unittest.TestCase):
-	def testClassContructor(self):
-		cls = asModel.ASClass();
-		self.assertEqual(cls.name,"")
-		cls = asModel.ASClass("ITestable")
-		self.assertEqual(cls.name,"ITestable")
-	def testBasicClass(self):
-		cls = asModel.ASClass("MyClass")
-		self.assertEqual(cls.name,"MyClass")
-		self.assertEqual(cls.isInterface,False)
-		self.assertEqual(cls.isDynamic,False)
-		self.assertEqual(cls.isFinal,False)
-		self.assertEqual(cls.visibility,"internal")
-		self.assertEqual(cls.extends,"")
-		self.assertEqual(cls.implements,[])
-	def testClassVariables(self):
-		cls = asModel.ASClass("VariableClass")
-		var1 = asModel.ASVariable("name","String")
-		var2 = asModel.ASVariable("age","int")
-		var1.visibility = "private"
-		var2.visibility = "public"
-		cls.variables[var1.name] = var1
-		cls.variables[var2.name] = var2
-		self.assertEqual(cls.name,"VariableClass")
-		self.assertEqual(cls.variables["name"].name,"name")
-		self.assertEqual(cls.variables["name"].type,"String")
-		self.assertEqual(cls.variables["name"].visibility,"private")
-		self.assertEqual(cls.variables["age"].name,"age")
-		self.assertEqual(cls.variables["age"].type,"int")
-		self.assertEqual(cls.variables["age"].visibility,"public")
-	def testClassMethods(self):
-		cls = asModel.ASClass("MethodClass")
-		meth1 = asModel.ASMethod("SayHello","String")
-		meth2 = asModel.ASMethod("DoNothing")
-		cls.methods[meth1.name] = meth1
-		cls.methods[meth2.name] = meth2
-		self.assertEqual(cls.name,"MethodClass")
-		self.assertEqual( cls.methods["SayHello"].name,"SayHello")
-		self.assertEqual( cls.methods["SayHello"].type,"String")
-		self.assertEqual( cls.methods["DoNothing"].name,"DoNothing")
-		self.assertEqual( cls.methods["DoNothing"].type,"void")
-	def testBasicInterface(self):
-		cls = asModel.ASClass("com.gurufaction.TestClass")
-		cls.isInterface = True
-		self.assertEqual(cls.name,"com.gurufaction.TestClass")
-		self.assertEqual(cls.isInterface,True,"isInterface() method failed")
-		self.assertEqual(cls.isDynamic,False)
-		self.assertEqual(cls.isFinal,False)
-		self.assertEqual(cls.visibility,"internal")
-		self.assertEqual(cls.extends,"")
-		self.assertEqual(cls.implements,[])
-	def testClassModifiers(self):
-		cls = asModel.ASClass()
-		cls.visibility = "public"
-		cls.isDynamic = True
-		cls.isFinal = True
-		self.assertEqual(cls.visibility,"public")
-		self.assertEqual(cls.isDynamic,True)
-		self.assertEqual(cls.isFinal,True)
+
+    def testClassContructor(self):
+        cls = asModel.ASClass();
+        self.assertEqual(cls.name,"")
+        cls = asModel.ASClass("ITestable")
+        self.assertEqual(cls.name,"ITestable")
+
+    def testBasicClass(self):
+        cls = asModel.ASClass("MyClass")
+        self.assertEqual(cls.name,"MyClass")
+        self.assertEqual(cls.isInterface,False)
+        self.assertEqual(cls.isDynamic,False)
+        self.assertEqual(cls.isFinal,False)
+        self.assertEqual(cls.visibility,"internal")
+        self.assertEqual(cls.extends,"")
+        self.assertEqual(cls.implements,[])
+
+    def testClassVariables(self):
+        cls = asModel.ASClass("VariableClass")
+        var1 = asModel.ASVariable("name","String")
+        var2 = asModel.ASVariable("age","int")
+        var1.visibility = "private"
+        var2.visibility = "public"
+        cls.variables[var1.name] = var1
+        cls.variables[var2.name] = var2
+        self.assertEqual(cls.name,"VariableClass")
+        self.assertEqual(cls.variables["name"].name,"name")
+        self.assertEqual(cls.variables["name"].type,"String")
+        self.assertEqual(cls.variables["name"].visibility,"private")
+        self.assertEqual(cls.variables["age"].name,"age")
+        self.assertEqual(cls.variables["age"].type,"int")
+        self.assertEqual(cls.variables["age"].visibility,"public")
+
+    def testClassMethods(self):
+        cls = asModel.ASClass("MethodClass")
+        meth1 = asModel.ASMethod("SayHello","String")
+        meth2 = asModel.ASMethod("DoNothing")
+        cls.methods[meth1.name] = meth1
+        cls.methods[meth2.name] = meth2
+        self.assertEqual(cls.name,"MethodClass")
+        self.assertEqual( cls.methods["SayHello"].name,"SayHello")
+        self.assertEqual( cls.methods["SayHello"].type,"String")
+        self.assertEqual( cls.methods["DoNothing"].name,"DoNothing")
+        self.assertEqual( cls.methods["DoNothing"].type,"void")
+
+    def testBasicInterface(self):
+        cls = asModel.ASClass("com.gurufaction.TestClass")
+        cls.isInterface = True
+        self.assertEqual(cls.name,"com.gurufaction.TestClass")
+        self.assertEqual(cls.isInterface,True,"isInterface() method failed")
+        self.assertEqual(cls.isDynamic,False)
+        self.assertEqual(cls.isFinal,False)
+        self.assertEqual(cls.visibility,"internal")
+        self.assertEqual(cls.extends,"")
+        self.assertEqual(cls.implements,[])
+
+    def testClassModifiers(self):
+        cls = asModel.ASClass()
+        cls.visibility = "public"
+        cls.isDynamic = True
+        cls.isFinal = True
+        self.assertEqual(cls.visibility,"public")
+        self.assertEqual(cls.isDynamic,True)
+        self.assertEqual(cls.isFinal,True)
+
 if __name__ == "__main__":
-	unittest.main()
+    unittest.main()
