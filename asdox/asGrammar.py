@@ -118,14 +118,16 @@ def parseASArg(s, location, tokens):
 def parseASMethod(s, location, tokens):
     if _isTracing:
         print('[method BEGIN] {0}'.format(tokens.name))
+    # 返回类型
     if tokens.type_:
         method = ASMethod(tokens.name, tokens.type_)
     else:
         method = ASMethod(tokens.name)
+    # 可见域
     if tokens.visibility:
-        method.visibility = 'internal'
-    else:
         method.visibility = tokens.visibility
+    else:
+        method.visibility = 'internal'
     # method 属性
     if tokens.override:
         method.isOverride = True
@@ -249,20 +251,6 @@ INIT = (
     QuotedString(quoteChar="=", endQuoteChar=";",multiline=True)
     ^ (EQUAL + DBL_QUOTED_STRING + TERMINATOR)
 )
-# 变量相关
-TYPE = COLON + (QUALIFIED_IDENTIFIER ^ STAR)('type_')
-VARIABLE_MODIFIERS = (
-    Optional(KEYWORDS['static']('static'))
-    & Optional(~KEYWORDS['var'] + IDENTIFIER('visibility'))
-)
-VARIABLE_DEFINITION = (
-    VARIABLE_MODIFIERS
-    + (KEYWORDS['const'] ^ KEYWORDS['var'])("kind")
-    + IDENTIFIER('name')
-    + Optional(TYPE)
-    + Optional(MULTI_LINE_COMMENT)
-    + (INIT ^ TERMINATOR)
-).setParseAction(parseASVariable)
 # 作用域相关
 USE_NAMESPACE = (
     KEYWORDS['use'].suppress()
@@ -296,6 +284,21 @@ BLOCK = Suppress(nestedExpr("{","}"))
 # BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG('metatag') ^ INCLUDE_DEFINITION
 # 加上静态初始化块
 BASE_BLOCK = USE_NAMESPACE ^ INCLUDE_DEFINITION ^ BLOCK
+# 变量相关
+TYPE = COLON + (QUALIFIED_IDENTIFIER ^ STAR)('type_')
+VARIABLE_MODIFIERS = (
+    Optional(KEYWORDS['static']('static'))
+    & Optional(~KEYWORDS['var'] + IDENTIFIER('visibility'))
+)
+VARIABLE_DEFINITION = (
+    ZeroOrMore(METATAG)('metatag')
+    + VARIABLE_MODIFIERS
+    + (KEYWORDS['const'] ^ KEYWORDS['var'])("kind")
+    + IDENTIFIER('name')
+    + Optional(TYPE)
+    + Optional(MULTI_LINE_COMMENT)
+    + (INIT ^ TERMINATOR)
+).setParseAction(parseASVariable)
 # 方法相关的语法
 METHOD_MODIFIER = (
     Optional(KEYWORDS['static']('static'))
@@ -317,15 +320,10 @@ METHOD_SIGNATURE = (
     # 函数名
     + IDENTIFIER('name')
     + LPARN  # (
-    # # 以 ',' 分割的参数
-    # + Optional(METHOD_PARAMETERS('arguments'))
-    # # ... 任意长参数
-    # + Optional(Optional(COMMA) + REST + IDENTIFIER)
-    + Optional(
-        (METHOD_PARAMETERS + COMMA + REST + IDENTIFIER)
-        ^ (REST + IDENTIFIER)
-        ^ (METHOD_PARAMETERS)
-    )('arguments')
+    # 以 ',' 分割的参数
+    + Optional(METHOD_PARAMETERS('arguments'))
+    # ... 任意长参数
+    + Optional(Optional(COMMA) + REST + IDENTIFIER)
     + RPARN  # )
     # 返回值类型
     + Optional(TYPE)# + Optional(COMMENTS)
