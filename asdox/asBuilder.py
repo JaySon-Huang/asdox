@@ -27,48 +27,110 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import asGrammar,os,fnmatch,asModel
 
-class Builder:
-	"Actionscript Source Builder"
-	sources = list()
-	packages = {}
-	def __init__(self):
-		self.sources[:] = []
-		self.packages = {}
-	def addSource(self,source,pattern = "*.as"):
-		try:
-			try:
-				# If 'source' is a file object read it.
-				self.parseSource( source.read() )
-			except:
-				# If 'source' is a filename open and read file.
-				self.parseSource( open(source,"r").read() )
-		except IOError:
-			# If 'source' is a directory read all files matching the
-			# specified pattern.
-			if os.path.isdir( source ):
-				files = self.locate(pattern,source)
-				for f in files:
-					self.parseSource( open(f,"r").read() )
-			else:
-				# If 'source' is a string append to source list
-				self.parseSource( source )
-	def parseSource(self,src):
-		self.sources.append( src )
-		asGrammar.PROGRAM.parseString(src.decode("ascii","ignore"))
-		pkg = asGrammar.package
-		asGrammar.package = asModel.ASPackage()
-		
-		if pkg.name in self.packages:
-			for imp in pkg.imports:
-				if imp not in self.packages[pkg.name].imports:
-					self.packages[pkg.name].imports.append(imp)
-			for cls in pkg.classes.values():
-				self.packages[pkg.name].classes[cls.name] = cls
-		else:
-			self.packages[pkg.name] = pkg
-	def locate(self,pattern, root=os.getcwd()):
-		for path, dirs, files in os.walk(root):
-			for filename in [os.path.abspath(os.path.join(path, filename)) for filename in files if fnmatch.fnmatch(filename, pattern)]:
-				yield filename
+import re
+import os
+import fnmatch
+
+import asGrammar
+import asModel
+import pyparsing
+
+
+class TidySourceFile:  
+
+    @staticmethod
+    def trim_bomflag(source):
+        if source[:3] == '\xEF\xBB\xBF':
+            source = source[3:]
+        return source
+
+    @staticmethod
+    def trim_comments(source):
+        comments_positions = []
+        asGrammar.COMMENTS.parseWithTabs() # 设置Tab不扩展, 否则下面的字符串位置不符
+        for _, begin, end in asGrammar.COMMENTS.scanString(source):
+            comments_positions.append((begin, end))
+        # 从后往前去除注释块
+        for begin, end in reversed(comments_positions):
+            # print('clearing:')
+            # print(source[begin:end])
+            source = ''.join(
+                list(source[:begin]) + list(source[end:])
+            )
+        return source
+
+    @staticmethod
+    def tidy(source):
+        # 删除多余的分号 
+        source = re.sub(r'^\s*;\s*\n', '', source, flags=re.MULTILINE)
+        # 去除行尾多余空白符
+        source = re.sub(r'\s+$', '', source, flags=re.MULTILINE)
+        # 删除多余的空行
+        source = re.sub(r'^\s*\n', '', source, flags=re.MULTILINE)
+        # 删除return语句多余的()
+        source = re.sub(
+            r'\breturn\s+\((.*)\)\s*;',
+            r'return \1;',
+            source
+        )
+        return source
+
+
+class Builder(object):
+    "Actionscript Source Builder"
+    sources = []
+    packages = {}
+
+    def __init__(self):
+        self.sources = []
+        self.packages = {}
+
+    def addSource(self, source, pattern="*.as"):
+        try:
+            try:
+                # If 'source' is a file object read it.
+                self.parseSource(source.read())
+            except AttributeError:
+                # If 'source' is a filename open and read file.
+                self.parseSource(open(source, 'rb').read())
+        except IOError:
+            # If 'source' is a directory read all files matching the
+            # specified pattern.
+            if os.path.isdir(source):
+                for filename in self.locate(pattern, source):
+                    print('parsing file: {0} ...'.format(filename))
+                    self.parseSource(open(filename, 'rb').read())
+            else:
+                # If 'source' is a string append to source list
+                self.parseSource(source)
+
+    def parseSource(self, src):
+        # 清理注释
+        src = TidySourceFile.tidy(TidySourceFile.trim_comments(src))
+
+        self.sources.append(src)
+        # 开始解析
+        pkg = asGrammar.PROGRAM.parseString(src)[0]
+        # try:
+        #     pkg = asGrammar.PROGRAM.parseString(src)[0]
+        # except pyparsing.ParseBaseException as exc:
+        #     from IPython import embed;embed();
+        # 融合多个文件
+        if self.packages.get(pkg.name) is None:
+            self.packages[pkg.name] = pkg
+        else:
+            for imp in pkg.imports:
+                if imp not in self.packages[pkg.name].imports:
+                    self.packages[pkg.name].imports.append(imp)
+            for cls in pkg.classes.values():
+                self.packages[pkg.name].classes[cls.name] = cls
+    
+    def locate(self, pattern, root=os.getcwd()):
+        for path, dirs, files in os.walk(root):
+            matched_filenames = [
+                os.path.abspath(os.path.join(path, filename))
+                for filename in files if fnmatch.fnmatch(filename, pattern)
+            ]
+            for filename in matched_filenames:
+                yield filename

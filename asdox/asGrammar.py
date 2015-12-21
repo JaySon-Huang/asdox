@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#encoding=utf-8
+# encoding=utf-8
 
 # Copyright (c) 2008, Michael Ramirez
 #
@@ -27,199 +27,383 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import os
 from pyparsing import *
-import os,fnmatch
 from asModel import *
 
-stack = []
-metatags = []
-imports = []
-package = ASPackage()
-class_name = ""
-def parseASPackage( s,l,t ):
-    global imports,package
-    package.name = t.name
-def parseASClass( s,l,t):
-    global class_name
-    cls = ASClass(t.name)
-    cls.extends = t.extends
-    if len(t.implements) > 0 :
-	cls.implements = t.implements[0]
-    if t.visibility == "":
-	cls.visibility = "internal"
-    else:
-	cls.visibility = t.visibility
-    if t.dynamic == "dynamic":
-	cls.isDynamic = True
-    if t.final == "final":
-	cls.isFinal = True
-    while metatags:
-	tag= metatags.pop()
-	cls.metadata.append(tag)
-    class_name = cls.name
-    package.classes[cls.name] = cls
-def parseASArg(s,l,t):
-    arg = ASType(t.name,t.type)
-    return arg
-def parseImports(s,l,t):
-    global imports
-    package.imports.append(t.name)
-def parseASMetaTag(s,l,t):
-    global metatags
-    meta = ASMetaTag(t.name)
-    index = 0
-    for att in t.attributes:
-	if att.key == "":
-	    meta.params[index] = att.value
-	else:
-	    meta.params[att.key] = att.value
-	index = index + 1
-    metatags.append(meta)
-def parseJavaDoc(s,l,t):
-    pass
-def parseASMethod(s,l,t):
-    global class_name,package,metatags
-    meth = ASMethod(t.name,t.type)
-    meth.visibility = t.visibility
-    if t.override:
-	meth.isOverride = True
-    if t.final:
-	meth.isFinal = True
-    if t.static:
-	meth.isStatic = True
-    for args in t.arguments:
-	for arg in args:
-	    meth.arguments[arg.name] =  arg
-    if t.accessor:
-	if package.classes[class_name].variables.has_key(meth.name) == False:
-	    package.classes[class_name].variables[meth.name] = ASVariable(meth.name,meth.type)
-	
-	if t.accessor == "get":
-	    package.classes[class_name].variables[meth.name].readable = True
-	    package.classes[class_name].variables[meth.name].type = meth.type
-	if t.accessor == "set":
-	    package.classes[class_name].variables[meth.name].writable = True
-	    for arg in meth.arguments.values():
-		package.classes[class_name].variables[meth.name].type = arg.type
-	while metatags:
-	    tag = metatags.pop()
-	    package.classes[class_name].variables[meth.name].metadata.append(tag)
-	package.classes[class_name].variables[meth.name].visibility = t.visibility
-	package.classes[class_name].variables[meth.name].isProperty = True
-	if t.override:
-	    package.classes[class_name].variables[meth.name].isOverride = True
-	if t.final:
-	    package.classes[class_name].variables[meth.name].isFinal = True
-	if t.static:
-	    package.classes[class_name].variables[meth.name].isStatic = True
-    else:
-	package.classes[class_name].methods[meth.name] = meth
-	while metatags:
-	    tag = metatags.pop()
-	    package.classes[class_name].methods[meth.name].metadata.append(tag)
-def parseASVariable(s,l,t):
-    global metatags,class_name,package
-    var = ASVariable(t.name,t.type)
-    if t.kind == "const":
-	var.isConstant = True
-    if t.visibility == "":
-	var.visibility = "internal"
-    else:
-	var.visibility = t.visibility
-    if t.static == "static":
-	var.isStatic = True
-    package.classes[class_name].variables[var.name] = var
-    package.classes[class_name].variables[var.name].readable = True
-    package.classes[class_name].variables[var.name].writable = True
-    while metatags:
-	tag= metatags.pop()
-	package.classes[class_name].variables[var.name].metadata.append(tag)
-def locate(pattern, root=os.getcwd()):
-		for path, dirs, files in os.walk(root):
-			for filename in [os.path.abspath(os.path.join(path, filename)) for filename in files if fnmatch.fnmatch(filename, pattern)]:
-				yield filename
-COMMA,COLON,LPARN,RPARN,LCURL,RCURL,EQUAL,SEMI,LSQUARE,RSQUARE = map(Suppress,",:(){}=;[]")
+# _isTracing = True
+_isTracing = False
 
-PACKAGE = Keyword("package")
-CLASS = Keyword("class")
-IMPLEMENTS = Keyword("implements").suppress()
-EXTENDS = Keyword("extends").suppress()
-FUNCTION = Keyword("function").suppress()
-IMPORT = Keyword("import").suppress()
-INCLUDE = Keyword("include").suppress()
-INTERFACE = Keyword("interface")
-INTERNAL = Keyword("internal")
-PUBLIC = Keyword("public")
-PRIVATE = Keyword("private")
-PROTECTED = Keyword("protected")
-MXINTERNAL = Keyword("mx_internal")
-STATIC = Keyword("static")
-PROTOTYPE = Keyword("prototype")
-FINAL = Keyword("final")
-OVERRIDE = Keyword("override")
-NATIVE = Keyword("native")
-DYNAMIC = Keyword("dynamic")
-USE = Keyword("use")
-NAMESPACE = Keyword("namespace")
-VAR = Keyword("var")
-CONST = Keyword("const")
-GET = Keyword("get")
-SET = Keyword("set")
-DOT = "."
-STAR = "*"
-REST = "..."
-UNDERSCORE = "_"
+def parseASPackage(s, location, tokens):
+    # from IPython import embed;embed();
+    if _isTracing:
+        print('parseASPackage[{0}] @ loc({1})'.format(tokens.name, location))
+    pkg = ASPackage()
+    pkg.name = tokens.name
+    if pkg.imports:
+        pkg.imports += tokens.imports.asList()
+    if pkg.use_namespace:
+        pkg.use_namespace += tokens.use_namespace.asList()
+    # 定义的类
+    if tokens.class_:
+        cls = tokens.class_[0]
+        pkg.classes[cls.name] = cls
+    # 定义的接口
+    if tokens.interface:
+        cls = tokens.interface[0]
+        pkg.classes[cls.name] = cls
+    return pkg
+
+def parseASClass(s, location, tokens):
+    if _isTracing:
+        print('parseASClass[{0}] @ loc({1})'.format(tokens.name, location))
+    cls = ASClass(tokens.name)
+    # 基类 & 接口
+    cls.extends = tokens.extends
+    if tokens.implements:
+        cls.implements = tokens.implements.asList()
+    # 可见性
+    if tokens.visibility == '':
+        cls.visibility = 'internal'
+    else:
+        cls.visibility = tokens.visibility
+    # 其他属性
+    if tokens.dynamic == 'dynamic':
+        cls.isDynamic = True
+    if tokens.final == 'final':
+        cls.isFinal = True
+    # metatag
+    if tokens.metatag:
+        cls.metadata.append(tokens.metatag[0])
+    for variable in tokens.variables:
+        variable = variable[0]
+        cls.variables[variable.name] = variable
+    # methods
+    for method in tokens.methods:
+        method = method[0]
+        cls.methods[method.name] = method
+        # TODO: getter/setter 对相关变量属性进行设置
+    # from IPython import embed;embed();
+    return ParseResults(cls)
+
+def parseImports(s, location, tokens):
+    if _isTracing:
+        print('parseImports[{0}] @ loc({1})'.format(tokens.name, location))
+    return tokens.name
+
+def parseASMetaTag(s, location, tokens):
+    if _isTracing:
+        print('parseASMetaTag[{0}] @ loc({1})'.format(tokens.name, location))
+    metatag = ASMetaTag(tokens.name)
+    index = 0
+    for attr in tokens.attributes:
+        if attr.key == '':
+            metatag.params[index] = attr.value
+        else:
+            metatag.params[attr.key] = attr.value
+        index = index + 1
+    return ParseResults(metatag)
+
+def parseJavaDoc(s, location, tokens):
+    pass
+
+def parseASArg(s, location, tokens):
+    if _isTracing:
+        print('parseASArg[{0}] @ loc({1})'.format(tokens.name, location))
+        # from IPython import embed;embed();
+    arg = ASType(tokens.name, tokens.type_)
+    return arg
+
+def parseASMethod(s, location, tokens):
+    if _isTracing:
+        print('[method BEGIN] {0}'.format(tokens.name))
+    if tokens.type_:
+        method = ASMethod(tokens.name, tokens.type_)
+    else:
+        method = ASMethod(tokens.name)
+    if tokens.visibility:
+        method.visibility = 'internal'
+    else:
+        method.visibility = tokens.visibility
+    # method 属性
+    if tokens.override:
+        method.isOverride = True
+    if tokens.final:
+        method.isFinal = True
+    if tokens.static:
+        method.isStatic = True
+    # method 传入参数
+    for arg in tokens.arguments:
+        method.arguments[arg.name] = arg
+    # from IPython import embed;embed();
+    if _isTracing:
+        print('[method END] {0}'.format(repr(method)))
+    return ParseResults(method)
+
+def parseASVariable(s, location, tokens):
+    if _isTracing:
+        print('parseASVariable[{0}] @ loc({1})'.format(tokens.name, location))
+    var = ASVariable(tokens.name, tokens.type_)
+    if tokens.visibility == '':
+        var.visibility = 'internal'
+    else:
+        var.visibility = tokens.visibility
+    # 静态量
+    if tokens.static == 'static':
+        var.isStatic = True
+    # 常量/变量
+    if tokens.kind == 'const':
+        var.isConstant = True
+        var.readable = True
+        var.writable = False
+    else:
+        var.readable = True
+        var.writable = True
+    # from IPython import embed;embed();
+    return ParseResults(var)
+
+def debug(s, location, tokens):
+    from IPython import embed;embed();
+
+
+KEYWORDS = {}
+KEYWORDS['package'] = Keyword('package')
+KEYWORDS['class'] = Keyword('class')
+KEYWORDS['implements'] = Keyword('implements').suppress()
+KEYWORDS['extends'] = Keyword('extends').suppress()
+KEYWORDS['function'] = Keyword('function').suppress()
+KEYWORDS['import'] = Keyword('import').suppress()
+KEYWORDS['include'] = Keyword('include').suppress()
+KEYWORDS['interface'] = Keyword('interface')
+
+KEYWORDS['internal'] = Keyword('internal')
+KEYWORDS['public'] = Keyword('public')
+KEYWORDS['private'] = Keyword('private')
+KEYWORDS['private'] = Keyword('private')
+KEYWORDS['protected'] = Keyword('protected')
+KEYWORDS['mxinternal'] = Keyword('mx_internal')
+
+KEYWORDS['static'] = Keyword('static')
+KEYWORDS['prototype'] = Keyword('prototype')
+KEYWORDS['final'] = Keyword('final')
+KEYWORDS['override'] = Keyword('override')
+KEYWORDS['native'] = Keyword('native')
+KEYWORDS['dynamic'] = Keyword('dynamic')
+
+KEYWORDS['use'] = Keyword('use')
+KEYWORDS['namespace'] = Keyword('namespace')
+
+KEYWORDS['var'] = Keyword('var')
+KEYWORDS['const'] = Keyword('const')
+
+KEYWORDS['get'] = Keyword('get')
+KEYWORDS['set'] = Keyword('set')
+
+COMMA,COLON,SEMI,EQUAL = list(map(Suppress, ',:;='))
+LPARN,RPARN,LCURL,RCURL,LSQUARE,RSQUARE = list(map(Suppress,'(){}[]'))
+UNDERSCORE = Literal('_')
+STAR = Literal('*')
+DOT = Literal('.')
+REST = Literal('...')
 TERMINATOR = Optional(SEMI)
 
+# 数字
 point = Literal('.')
 e = CaselessLiteral('E')
-plusorminus = Literal('+') | Literal('-')
-number = Word(nums) 
-integer = Combine( Optional(plusorminus) + number )
-floatnumber = Combine( integer + Optional( point + Optional(number) ) + Optional( e + integer ) )
-HEX = "0x" + Word(hexnums)
+plusOrMinus = Literal('+') | Literal('-')
+number = Word(nums)
+integer = Combine(Optional(plusOrMinus) + number)
+floatnumber = Combine(
+    integer
+    + Optional(point + Optional(number))
+    + Optional( e + integer )
+)
+HEX = '0x' + Word(hexnums)
 
-########################## NEW GRAMMAR DEFINITION ##############################
-IDENTIFIER = Word(alphas + '_',alphanums + '_') 
-QUALIFIED_IDENTIFIER = Combine(IDENTIFIER + ZeroOrMore( DOT + IDENTIFIER ))
+########################## NEW GRAMMAR DEFINITION ###########################
+# 标识符
+IDENTIFIER = Word(alphas+'_', alphanums+'_') 
+QUALIFIED_IDENTIFIER = Combine(IDENTIFIER + ZeroOrMore(DOT + IDENTIFIER))
+# 注释相关
 SINGLE_LINE_COMMENT = dblSlashComment
 MULTI_LINE_COMMENT = cStyleComment
-JAVADOC_COMMENT = (Regex(r"/\*\*(?:[^*]*\*+)+?/")).setParseAction(parseJavaDoc)
-COMMENTS = SINGLE_LINE_COMMENT.suppress() ^ JAVADOC_COMMENT ^ MULTI_LINE_COMMENT.suppress()
+JAVADOC_COMMENT = (
+    Regex(r'/\*\*(?:[^*]*\*+)+?/')
+)#.setParseAction(parseJavaDoc)
+COMMENTS = (
+    SINGLE_LINE_COMMENT#.suppress()
+    ^ JAVADOC_COMMENT
+    ^ MULTI_LINE_COMMENT#.suppress()
+)
+
 DBL_QUOTED_STRING = QuotedString(quoteChar="\"", escChar='\\')
 SINGLE_QUOTED_STRING = QuotedString(quoteChar="'", escChar='\\')
 ARRAY_INIT = LSQUARE + RSQUARE
-VALUE = floatnumber ^ QUALIFIED_IDENTIFIER ^ DBL_QUOTED_STRING ^ SINGLE_QUOTED_STRING ^ integer ^ HEX
-INIT = QuotedString(quoteChar="=", endQuoteChar=";",multiline="true") ^ (EQUAL + DBL_QUOTED_STRING + TERMINATOR)
-TYPE = COLON + (QUALIFIED_IDENTIFIER ^ STAR)("type")
-VARIABLE_MODIFIERS = Optional(STATIC("static")) & Optional(IDENTIFIER("visibility"))
-VARIABLE_DEFINITION = ( VARIABLE_MODIFIERS + (CONST ^ VAR)("kind") + IDENTIFIER("name")  + Optional(TYPE) + Optional(MULTI_LINE_COMMENT) + (INIT ^ TERMINATOR)).setParseAction(parseASVariable)
-USE_NAMESPACE = USE + NAMESPACE + QUALIFIED_IDENTIFIER + TERMINATOR
-ATTRIBUTES =  (Optional(IDENTIFIER("key") + EQUAL) + VALUE("value") ).setResultsName("attributes",listAllMatches="true")
-METATAG = (LSQUARE + IDENTIFIER("name") + Optional( LPARN + delimitedList(ATTRIBUTES) + RPARN ) + RSQUARE).setParseAction(parseASMetaTag)
-INCLUDE_DEFINITION = INCLUDE + QuotedString(quoteChar="\"", escChar='\\') + TERMINATOR
-IMPORT_DEFINITION = (IMPORT + QUALIFIED_IDENTIFIER("name") + Optional(DOT + STAR) + TERMINATOR).setParseAction(parseImports)
-BLOCK = Suppress( nestedExpr("{","}") )
-BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG ^ INCLUDE_DEFINITION
-METHOD_MODIFIER = Optional(STATIC("static")) & ( Optional(OVERRIDE("override")) & Optional(FINAL("final")) & Optional(IDENTIFIER("visibility")) )
-METHOD_PARAMETERS = IDENTIFIER("name") + TYPE + (Optional( EQUAL + VALUE ) & Optional(MULTI_LINE_COMMENT) )
-METHOD_SIGNATURE = FUNCTION + Optional(GET ^ SET)("accessor") + IDENTIFIER("name") + LPARN + Optional(delimitedList(METHOD_PARAMETERS.setParseAction(parseASArg)).setResultsName("arguments",listAllMatches="true")) + Optional( Optional(COMMA) + REST + IDENTIFIER) + RPARN + Optional( TYPE ) + Optional(COMMENTS)
-METHOD_DEFINITION = (METHOD_MODIFIER + METHOD_SIGNATURE  + BLOCK).setParseAction(parseASMethod)
-CLASS_IMPLEMENTS = IMPLEMENTS + delimitedList( QUALIFIED_IDENTIFIER ).setResultsName("implements",listAllMatches="true")
-CLASS_BLOCK = LCURL + ZeroOrMore( IMPORT_DEFINITION ^ BASE_BLOCK ^ VARIABLE_DEFINITION ^ METHOD_DEFINITION ) + RCURL
-CLASS_EXTENDS = EXTENDS + QUALIFIED_IDENTIFIER("extends")
-INTERFACE_EXTENDS = EXTENDS + delimitedList( QUALIFIED_IDENTIFIER )
-BASE_MODIFIERS = INTERNAL ^ PUBLIC
-CLASS_MODIFIERS = Optional(FINAL("final")) & Optional(DYNAMIC("dynamic")) & Optional(BASE_MODIFIERS("visibility"))
-CLASS_DEFINITION = (CLASS_MODIFIERS + CLASS + QUALIFIED_IDENTIFIER("name") + Optional( CLASS_EXTENDS ) + Optional( CLASS_IMPLEMENTS ) ).setParseAction(parseASClass) + CLASS_BLOCK 
-INTERFACE_BLOCK = LCURL + ZeroOrMore( IMPORT_DEFINITION ^ BASE_BLOCK ^ VARIABLE_DEFINITION ^ (METHOD_SIGNATURE + TERMINATOR) ) + RCURL
-INTERFACE_DEFINITION = Optional(BASE_MODIFIERS) + INTERFACE + QUALIFIED_IDENTIFIER + Optional( INTERFACE_EXTENDS ) + INTERFACE_BLOCK
-PACKAGE_BLOCK = LCURL + ZeroOrMore( IMPORT_DEFINITION ^ BASE_BLOCK ) + (CLASS_DEFINITION ^ INTERFACE_DEFINITION) + RCURL
-PACKAGE_DEFINITION = (PACKAGE + Optional( QUALIFIED_IDENTIFIER("name") ) ).setParseAction(parseASPackage) + PACKAGE_BLOCK 
+VALUE = (
+    floatnumber ^ QUALIFIED_IDENTIFIER
+    ^ DBL_QUOTED_STRING ^ SINGLE_QUOTED_STRING
+    ^ integer ^ HEX
+)
+INIT = (
+    QuotedString(quoteChar="=", endQuoteChar=";",multiline=True)
+    ^ (EQUAL + DBL_QUOTED_STRING + TERMINATOR)
+)
+# 变量相关
+TYPE = COLON + (QUALIFIED_IDENTIFIER ^ STAR)('type_')
+VARIABLE_MODIFIERS = (
+    Optional(KEYWORDS['static']('static'))
+    & Optional(~KEYWORDS['var'] + IDENTIFIER('visibility'))
+)
+VARIABLE_DEFINITION = (
+    VARIABLE_MODIFIERS
+    + (KEYWORDS['const'] ^ KEYWORDS['var'])("kind")
+    + IDENTIFIER('name')
+    + Optional(TYPE)
+    + Optional(MULTI_LINE_COMMENT)
+    + (INIT ^ TERMINATOR)
+).setParseAction(parseASVariable)
+# 作用域相关
+USE_NAMESPACE = (
+    KEYWORDS['use'].suppress()
+    + KEYWORDS['namespace'].suppress()
+    + QUALIFIED_IDENTIFIER + TERMINATOR
+)
+INCLUDE_DEFINITION = (
+    KEYWORDS['include']
+    + QuotedString(quoteChar="\"", escChar='\\')
+    + TERMINATOR
+)
+IMPORT_DEFINITION = (
+    KEYWORDS['import']
+    + Combine(
+        QUALIFIED_IDENTIFIER
+        + Optional(DOT + STAR))('name')
+    + TERMINATOR
+).setParseAction(parseImports)
+
+ATTRIBUTES = (
+    Optional(IDENTIFIER("key") + EQUAL)
+    + VALUE("value")
+).setResultsName("attributes", listAllMatches=True)
+METATAG = (
+    LSQUARE   # [
+    + IDENTIFIER('name')
+    + Optional(LPARN + delimitedList(ATTRIBUTES) + RPARN)
+    + RSQUARE # ]
+).setParseAction(parseASMetaTag)
+BLOCK = Suppress(nestedExpr("{","}"))
+# BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG('metatag') ^ INCLUDE_DEFINITION
+# 加上静态初始化块
+BASE_BLOCK = USE_NAMESPACE ^ METATAG('metatag') ^ INCLUDE_DEFINITION ^ BLOCK
+# 方法相关的语法
+METHOD_MODIFIER = (
+    Optional(KEYWORDS['static']('static'))
+    & (Optional(KEYWORDS['override']("override"))
+        & Optional(KEYWORDS['final']('final'))
+        & Optional(~KEYWORDS['function'] + IDENTIFIER('visibility'))
+    )
+)
+METHOD_PARAMETER = (
+    IDENTIFIER('name')
+    + TYPE
+    + Optional(EQUAL + VALUE)
+).setParseAction(parseASArg)
+METHOD_PARAMETERS = delimitedList(METHOD_PARAMETER)#.setDebug()
+METHOD_SIGNATURE = (
+    KEYWORDS['function']
+    # getter, setter
+    + Optional(KEYWORDS['get'] ^ KEYWORDS['set'])("accessor")
+    # 函数名
+    + IDENTIFIER('name')
+    + LPARN  # (
+    # # 以 ',' 分割的参数
+    # + Optional(METHOD_PARAMETERS('arguments'))
+    # # ... 任意长参数
+    # + Optional(Optional(COMMA) + REST + IDENTIFIER)
+    + Optional(
+        (METHOD_PARAMETERS + COMMA + REST + IDENTIFIER)
+        ^ (REST + IDENTIFIER)
+        ^ (METHOD_PARAMETERS)
+    )('arguments')
+    + RPARN  # )
+    # 返回值类型
+    + Optional(TYPE)# + Optional(COMMENTS)
+)
+METHOD_DEFINITION = (
+    Optional(METHOD_MODIFIER)
+    + METHOD_SIGNATURE
+    + BLOCK
+).setParseAction(parseASMethod)#.setDebug()
+# 类相关的语法
+CLASS_IMPLEMENTS = (
+    KEYWORDS['implements']
+    + delimitedList(
+        QUALIFIED_IDENTIFIER
+    ).setResultsName("implements")
+)
+CLASS_BLOCK = (
+    LCURL   # {
+    + ZeroOrMore(
+        IMPORT_DEFINITION
+        ^ BASE_BLOCK
+        ^ VARIABLE_DEFINITION.setResultsName('variables', listAllMatches=True)
+        ^ METHOD_DEFINITION.setResultsName('methods', listAllMatches=True)
+    )
+    + RCURL # }
+)
+CLASS_EXTENDS = KEYWORDS['extends'] + QUALIFIED_IDENTIFIER("extends")
+INTERFACE_EXTENDS = KEYWORDS['extends'] + delimitedList(QUALIFIED_IDENTIFIER)
+BASE_MODIFIERS = KEYWORDS['internal'] ^ KEYWORDS['public']
+CLASS_MODIFIERS = (
+    Optional(KEYWORDS['final']('final'))
+    & Optional(KEYWORDS['dynamic']('dynamic'))
+    & Optional(BASE_MODIFIERS('visibility'))
+)
+CLASS_DEFINITION = (
+    ZeroOrMore(METATAG)('metatag')
+    + CLASS_MODIFIERS
+    + KEYWORDS['class']
+    + QUALIFIED_IDENTIFIER('name')
+    + Optional(CLASS_EXTENDS)
+    + Optional(CLASS_IMPLEMENTS)
+    + CLASS_BLOCK
+).setParseAction(parseASClass)
+# 接口相关的语法
+INTERFACE_BLOCK = (
+    LCURL   # {
+    + ZeroOrMore(
+        IMPORT_DEFINITION
+        ^ BASE_BLOCK
+        ^ VARIABLE_DEFINITION
+        ^ (METHOD_SIGNATURE + TERMINATOR)
+    )
+    + RCURL # }
+)
+INTERFACE_DEFINITION = (
+    Optional(BASE_MODIFIERS)
+    + KEYWORDS['interface'] + QUALIFIED_IDENTIFIER
+    + Optional(INTERFACE_EXTENDS)
+    + INTERFACE_BLOCK
+)
+# 包相关的语法
+PACKAGE_BLOCK = (
+    LCURL   # {
+    + ZeroOrMore(IMPORT_DEFINITION)('imports')
+    + ZeroOrMore(USE_NAMESPACE)('use_namespace')
+    + (CLASS_DEFINITION('class_') ^ INTERFACE_DEFINITION('interface'))
+    + RCURL # }
+)
+PACKAGE_DEFINITION = (
+    KEYWORDS['package'].suppress()
+    + Optional(QUALIFIED_IDENTIFIER('name'))
+    + PACKAGE_BLOCK
+).setParseAction(parseASPackage)
 # Windows 下文件的 BOM 头
 BOM = Literal('\xEF\xBB\xBF').suppress()
 PROGRAM = (
     Optional(BOM)
-    + ZeroOrMore(COMMENTS)
+    # + ZeroOrMore(COMMENTS)
     + PACKAGE_DEFINITION
 )
+

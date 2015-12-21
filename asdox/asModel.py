@@ -27,101 +27,118 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 class Documentable:
-	"Actionscript Object that allows for JavaDoc declaration"
-	pass
+    "Actionscript Object that allows for JavaDoc declaration"
+    pass
+
 class Visible:
-	visibility = "internal"
-	def __init__(self):
-		self.visibility = "internal"
+    def __init__(self):
+        self.visibility = "internal"
+
 class MetaTagable:
-	"Actionscript Object that allows for MetaTags"
-	metadata = []
+    "Actionscript Object that allows for MetaTags"
+    def __init__(self):
+        self.metadata = []
+
 class ASType:
-	"Actionscript 3 Type"
-	name = "";
-	type = "";
-	def __init__(self,name,type):
-		self.name = name
-		self.type = type
+    "Actionscript 3 Type"
+
+    def __init__(self, name, type_):
+        self.name = name
+        self.type_ = type_
+
+    def __repr__(self):
+        return '<ASType: {0}>'.format(self.name)
+
 class ASVariable(ASType,Visible,MetaTagable):
-	"Actionscript 3 Variable"
-	isStatic = False
-	isConstant = False
-	readable = False
-	writable = False
-	isProperty = False
-	def __init__(self, name = "", type = "*"):
-		ASType.__init__(self,name,type)
-		self.metadata = []
-		self.readable = False
-		self.writable = False
-		self.isProperty = False
+    "Actionscript 3 Variable"
+
+    def __init__(self, name='', type_='*'):
+        ASType.__init__(self, name, type_)
+        self.isStatic = False
+        self.isConstant = False
+        self.metadata = []
+        self.readable = False
+        self.writable = False
+        self.isProperty = False
+
+    def __repr__(self):
+        return '<ASVariable: {0}>'.format(self.name)
+
 class ASMetaTag:
-	"Actionscript MetaTag Definition"
-	params = dict()
-	name = ""
-	def __init__(self,name = ""):
-		self.name = name
-		self.params = dict()
+    "Actionscript MetaTag Definition"
+
+    def __init__(self, name=''):
+        self.name = name
+        self.params = {}
+
+    def __repr__(self):
+        return '<ASMetaTag: {0}>'.format(self.name)
+
+class ASMethod(ASType, Visible, MetaTagable):
+    "Actionscript Method Definition"
+
+    def __init__(self, name='', type_='void'):
+        self.isOverride = False
+        self.isFinal = False
+        self.isStatic = False
+        self.name = name
+        self.type_ = type_
+        self.metadata = []
+        self.arguments = {}
+
+    def __repr__(self):
+        return '<ASMethod: {0}>'.format(self.name)
+
 class ASClass(Visible,MetaTagable):
-	"Actionscript Class Definition"
-	name = ""
-	variables = dict()
-	methods = dict()
-	extends = ""
-	implements = []
-	isDynamic = False
-	isFinal = False
-	isInterface = False
-	def __init__(self, name = ""):
-		self.name = name
-		self.metadata = []
-		self.variables = dict()
-		self.methods = dict()
-		self.extends = ""
-		self.implements = []
-		self.isDynamic = False
-		self.isFinal = False
-		self.isInterface = False
-class ASPackage(Visible,MetaTagable):
-	"Actionscript Package Definition"
-	classes = dict()
-	imports = []
-	def __init__(self, name = ""):
-		self.name = name
-		self.metadata = []
-		self.classes = dict()
-		self.imports = []
-	def toString(self):
-		print "Package: " + self.name
-		for cls in self.classes.values():
-			print cls.visibility + " class " + cls.name + " implements " + str(cls.implements)
-			for meta in cls.metadata:
-				print "\t\t[" + meta.name + "]"
-			for meth in cls.methods.values():
-				for meta in meth.metadata:
-					print "\t\t[" + meta.name + "]"
-				print "\t\tMethod: " + meth.visibility + " " + meth.name + ":" + meth.type
-				for arg in meth.arguments.values():
-					print "\t\t\tArguments: " + arg.name + ":" + arg.type
-			for var in cls.variables.values():
-				for meta in var.metadata:
-					print "\t\t[" + meta.name + "]"
-				print "\t\tVariables: " + var.visibility + " " + var.name + ":" + var.type
-			for prop in cls.properties.values():
-				for meta in prop.metadata:
-					print "\t\t[" + meta.name + "]"
-				print "\t\tProperty: " + prop.visibility + " " + prop.name + ":" + prop.type	
-class ASMethod(ASType,Visible,MetaTagable):
-	"Actionscript Method Definition"
-	arguments = dict()
-	isOverride = False
-	isFinal = False
-	isStatic = False
-	def __init__(self, name = "", type = "void"):
-		self.name = name
-		self.type = type
-		self.metadata = []
-		self.arguments = dict()
-	
+    "Actionscript Class Definition"
+
+    def __init__(self, name = ''):
+        self.name = name
+        self.metadata = []
+        self.variables = {}
+        self.methods = {}
+        self.extends = ''
+        self.implements = []
+        self.isDynamic = False
+        self.isFinal = False
+        self.isInterface = False
+
+    def __repr__(self):
+        return '<ASClass: {0}>'.format(self.name)
+
+class ASPackage(Visible, MetaTagable):
+    "Actionscript Package Definition"
+    
+    def __init__(self, name=''):
+        self.name = name
+        self.metadata = []
+        self.classes = {}
+        self.imports = []
+        self.use_namespace = []
+
+    def __repr__(self):
+        return '<ASPackage: {0}>'.format(self.name)
+
+    def toString(self):
+        print "Package: " + self.name
+        for cls in self.classes.values():
+            print cls.visibility + " class " + cls.name + " implements " + str(cls.implements)
+            for meta in cls.metadata:
+                print "\t\t[" + meta.name + "]"
+            for meth in cls.methods.values():
+                for meta in meth.metadata:
+                    print "\t\t[" + meta.name + "]"
+                print "\t\tMethod: " + meth.visibility + " " + meth.name + ":" + meth.type
+                for arg in meth.arguments.values():
+                    print "\t\t\tArguments: " + arg.name + ":" + arg.type
+            for var in cls.variables.values():
+                for meta in var.metadata:
+                    print "\t\t[" + meta.name + "]"
+                print "\t\tVariables: " + var.visibility + " " + var.name + ":" + var.type
+            for prop in cls.properties.values():
+                for meta in prop.metadata:
+                    print "\t\t[" + meta.name + "]"
+                print "\t\tProperty: " + prop.visibility + " " + prop.name + ":" + prop.type    
+
