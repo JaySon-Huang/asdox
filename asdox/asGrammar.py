@@ -302,7 +302,7 @@ VARIABLE_DEFINITION = (
 # 方法相关的语法
 METHOD_MODIFIER = (
     Optional(KEYWORDS['static']('static'))
-    & (Optional(KEYWORDS['override']("override"))
+    & (Optional(KEYWORDS['override']('override'))
         & Optional(KEYWORDS['final']('final'))
         & Optional(~KEYWORDS['function'] + IDENTIFIER('visibility'))
     )
@@ -329,7 +329,8 @@ METHOD_SIGNATURE = (
     + Optional(TYPE)# + Optional(COMMENTS)
 )
 METHOD_DEFINITION = (
-    Optional(METHOD_MODIFIER)
+    ZeroOrMore(METATAG)('metatag')
+    + Optional(METHOD_MODIFIER)
     + METHOD_SIGNATURE
     + BLOCK
 ).setParseAction(parseASMethod)#.setDebug()
