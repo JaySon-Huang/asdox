@@ -29,6 +29,128 @@ class ASMethodTestCase(BaseTestCase):
         self.assertEqual(cls.methods["MyClass"].name, "MyClass")
         self.assertEqual(cls.methods["MyClass"].visibility, "public")
 
+    def testConstructorMethodWithOneArguments(self):
+        self.builder.addSource('''
+        package com.gurufaction.asdox {
+            import flash.net.*;
+            public dynamic class ModelPanel extends Item {
+
+                private var modelDesTA:TextArea;
+
+                public function ModelPanel(scale:Number){
+                }
+            }
+        }
+        ''')
+        pkg = self.builder.packages["com.gurufaction.asdox"]
+        cls = pkg.classes["ModelPanel"]
+        self.assertEqual(cls.name, 'ModelPanel')
+        self.assertEqual(cls.visibility, 'public')
+        self.assertEqual(cls.methods['ModelPanel'].name, 'ModelPanel')
+        self.assertEqual(cls.methods['ModelPanel'].visibility, 'public')
+        arg = cls.methods['ModelPanel'].arguments['scale']
+        self.assertEqual(arg.name, 'scale')
+        self.assertEqual(arg.type_, 'Number')
+
+    def testConstructorMethodWithOneArgumentsWithDefaultValue(self):
+        self.builder.addSource('''
+        package com.gurufaction.asdox {
+            import flash.net.*;
+            public dynamic class ModelPanel extends Item {
+
+                private var modelDesTA:TextArea;
+
+                public function ModelPanel(scale:Number=0){
+                }
+            }
+        }
+        ''')
+        pkg = self.builder.packages["com.gurufaction.asdox"]
+        cls = pkg.classes["ModelPanel"]
+        self.assertEqual(cls.name, 'ModelPanel')
+        self.assertEqual(cls.visibility, 'public')
+        self.assertEqual(cls.methods['ModelPanel'].name, 'ModelPanel')
+        self.assertEqual(cls.methods['ModelPanel'].visibility, 'public')
+        arg = cls.methods['ModelPanel'].arguments['scale']
+        self.assertEqual(arg.name, 'scale')
+        self.assertEqual(arg.type_, 'Number')
+
+    def testConstructorMethodWithMultipleArguments(self):
+        self.builder.addSource('''
+        package com.gurufaction.asdox {
+            import flash.net.*;
+            public dynamic class ModelPanel extends Item {
+
+                private var modelDesTA:TextArea;
+
+                public function ModelPanel(
+                    scale:Number,
+                    modeltype:int,
+                    addWidth:int,
+                    addHeight:int){
+                }
+            }
+        }
+        ''')
+        pkg = self.builder.packages["com.gurufaction.asdox"]
+        cls = pkg.classes["ModelPanel"]
+        pkg = self.builder.packages["com.gurufaction.asdox"]
+        cls = pkg.classes["ModelPanel"]
+        self.assertEqual(cls.name, 'ModelPanel')
+        self.assertEqual(cls.visibility, 'public')
+        self.assertEqual(cls.methods['ModelPanel'].name, 'ModelPanel')
+        self.assertEqual(cls.methods['ModelPanel'].visibility, 'public')
+        arg1 = cls.methods['ModelPanel'].arguments['scale']
+        self.assertEqual(arg1.name, 'scale')
+        self.assertEqual(arg1.type_, 'Number')
+        arg2 = cls.methods['ModelPanel'].arguments['modeltype']
+        self.assertEqual(arg2.name, 'modeltype')
+        self.assertEqual(arg2.type_, 'int')
+        arg3 = cls.methods['ModelPanel'].arguments['addWidth']
+        self.assertEqual(arg3.name, 'addWidth')
+        self.assertEqual(arg3.type_, 'int')
+        arg4 = cls.methods['ModelPanel'].arguments['addHeight']
+        self.assertEqual(arg4.name, 'addHeight')
+        self.assertEqual(arg4.type_, 'int')
+
+    def testConstructorMethodWithMultipleArgumentsWithDefaultValue(self):
+        self.builder.addSource('''
+        package com.gurufaction.asdox {
+            import flash.net.*;
+            public dynamic class ModelPanel extends Item {
+
+                private var modelDesTA:TextArea;
+
+                public function ModelPanel(
+                    scale:Number = 4,
+                    modeltype:int = 0,
+                    addWidth:int =0 ,
+                    addHeight:int = 0){
+                }
+            }
+        }
+        ''')
+        pkg = self.builder.packages["com.gurufaction.asdox"]
+        cls = pkg.classes["ModelPanel"]
+        pkg = self.builder.packages["com.gurufaction.asdox"]
+        cls = pkg.classes["ModelPanel"]
+        self.assertEqual(cls.name, 'ModelPanel')
+        self.assertEqual(cls.visibility, 'public')
+        self.assertEqual(cls.methods['ModelPanel'].name, 'ModelPanel')
+        self.assertEqual(cls.methods['ModelPanel'].visibility, 'public')
+        arg1 = cls.methods['ModelPanel'].arguments['scale']
+        self.assertEqual(arg1.name, 'scale')
+        self.assertEqual(arg1.type_, 'Number')
+        arg2 = cls.methods['ModelPanel'].arguments['modeltype']
+        self.assertEqual(arg2.name, 'modeltype')
+        self.assertEqual(arg2.type_, 'int')
+        arg3 = cls.methods['ModelPanel'].arguments['addWidth']
+        self.assertEqual(arg3.name, 'addWidth')
+        self.assertEqual(arg3.type_, 'int')
+        arg4 = cls.methods['ModelPanel'].arguments['addHeight']
+        self.assertEqual(arg4.name, 'addHeight')
+        self.assertEqual(arg4.type_, 'int')
+
     def testMethod(self):
         '''
         Parse class method with no arguments.
