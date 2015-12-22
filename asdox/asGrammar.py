@@ -32,8 +32,8 @@ import os
 from pyparsing import *
 from asModel import *
 
-# _isTracing = True
 _isTracing = False
+# _isTracing = True
 
 def parseASPackage(s, location, tokens):
     # from IPython import embed;embed();
@@ -87,6 +87,30 @@ def parseASClass(s, location, tokens):
     # from IPython import embed;embed();
     return ParseResults(cls)
 
+def parseASInterface(s, location, tokens):
+    if _isTracing:
+        print('parseASInterface[{0}] @ loc({1})'.format(tokens.name, location))
+    cls = ASClass(tokens.name)
+    # methods
+    for method in tokens.methods:
+        method = method[0]
+        cls.methods[method.name] = method
+        # TODO: getter/setter 对相关变量属性进行设置
+    # from IPython import embed;embed();
+    return ParseResults(cls)
+
+def parseASVirtualMethod(s, location, tokens):
+    if _isTracing:
+        print('parseASVirtualMethod[{0}] @ loc({1})'.format(tokens.name, location))
+    if tokens.type_:
+        method = ASVirtualMethod(tokens.name, tokens.type_)
+    else:
+        method = ASVirtualMethod(tokens.name)
+    # method 传入参数
+    for arg in tokens.arguments:
+        method.arguments[arg.name] = arg
+    return ParseResults(method)
+
 def parseImports(s, location, tokens):
     if _isTracing:
         print('parseImports[{0}] @ loc({1})'.format(tokens.name, location))
@@ -117,7 +141,7 @@ def parseASArg(s, location, tokens):
 
 def parseASMethod(s, location, tokens):
     if _isTracing:
-        print('[method BEGIN] {0}'.format(tokens.name))
+        print('parseASMethod[{0}] @ loc({1})'.format(tokens.name, location))
     # 返回类型
     if tokens.type_:
         method = ASMethod(tokens.name, tokens.type_)
@@ -139,8 +163,6 @@ def parseASMethod(s, location, tokens):
     for arg in tokens.arguments:
         method.arguments[arg.name] = arg
     # from IPython import embed;embed();
-    if _isTracing:
-        print('[method END] {0}'.format(repr(method)))
     return ParseResults(method)
 
 def parseASVariable(s, location, tokens):
@@ -224,9 +246,17 @@ floatnumber = Combine(
 HEX = '0x' + Word(hexnums)
 
 ########################## NEW GRAMMAR DEFINITION ###########################
-# 标识符
-IDENTIFIER = Word(alphas+'_', alphanums+'_') 
-QUALIFIED_IDENTIFIER = Combine(IDENTIFIER + ZeroOrMore(DOT + IDENTIFIER))
+# 标识符, 首字母可以为字母或_或$
+IDENTIFIER = Word(alphas+'_'+'$', alphanums+'_')
+QUALIFIED_IDENTIFIER = Combine(
+    IDENTIFIER
+    + ZeroOrMore(DOT + IDENTIFIER)
+)
+# 泛型
+GENERIC_IDENTIFIER = Combine(
+    IDENTIFIER
+    + ZeroOrMore(DOT + '<' + IDENTIFIER + '>')
+)
 # 注释相关
 SINGLE_LINE_COMMENT = dblSlashComment
 MULTI_LINE_COMMENT = cStyleComment
@@ -242,20 +272,31 @@ COMMENTS = (
 DBL_QUOTED_STRING = QuotedString(quoteChar="\"", escChar='\\')
 SINGLE_QUOTED_STRING = QuotedString(quoteChar="'", escChar='\\')
 ARRAY_INIT = LSQUARE + RSQUARE
+OBJECT_INIT = nestedExpr("{","}")
 VALUE = (
     floatnumber ^ QUALIFIED_IDENTIFIER
     ^ DBL_QUOTED_STRING ^ SINGLE_QUOTED_STRING
     ^ integer ^ HEX
 )
 INIT = (
-    QuotedString(quoteChar="=", endQuoteChar=";",multiline=True)
-    ^ (EQUAL + DBL_QUOTED_STRING + TERMINATOR)
+    QuotedString(quoteChar="=", endQuoteChar=";", multiline=True)
+    ^ (
+        EQUAL
+        + (DBL_QUOTED_STRING ^ ARRAY_INIT ^ OBJECT_INIT)
+        + TERMINATOR
+    )
 )
 # 作用域相关
 USE_NAMESPACE = (
     KEYWORDS['use'].suppress()
     + KEYWORDS['namespace'].suppress()
     + QUALIFIED_IDENTIFIER + TERMINATOR
+)
+NAMESPACE_DEFINITION = (
+    Optional(KEYWORDS['public'])
+    + KEYWORDS['namespace']
+    + IDENTIFIER('name')
+    + TERMINATOR
 )
 INCLUDE_DEFINITION = (
     KEYWORDS['include']
@@ -280,15 +321,11 @@ METATAG = (
     + Optional(LPARN + delimitedList(ATTRIBUTES) + RPARN)
     + RSQUARE # ]
 ).setParseAction(parseASMetaTag)
-BLOCK = Suppress(nestedExpr("{","}"))
-# BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG('metatag') ^ INCLUDE_DEFINITION
-# 加上静态初始化块
-BASE_BLOCK = USE_NAMESPACE ^ INCLUDE_DEFINITION ^ BLOCK
 # 变量相关
-TYPE = COLON + (QUALIFIED_IDENTIFIER ^ STAR)('type_')
+TYPE = COLON + (QUALIFIED_IDENTIFIER ^ GENERIC_IDENTIFIER ^ STAR)('type_')
 VARIABLE_MODIFIERS = (
     Optional(KEYWORDS['static']('static'))
-    & Optional(~KEYWORDS['var'] + IDENTIFIER('visibility'))
+    & Optional(~KEYWORDS['var'] + ~KEYWORDS['const'] + IDENTIFIER('visibility'))
 )
 VARIABLE_DEFINITION = (
     ZeroOrMore(METATAG)('metatag')
@@ -296,9 +333,17 @@ VARIABLE_DEFINITION = (
     + (KEYWORDS['const'] ^ KEYWORDS['var'])("kind")
     + IDENTIFIER('name')
     + Optional(TYPE)
-    + Optional(MULTI_LINE_COMMENT)
+    # + Optional(MULTI_LINE_COMMENT)
     + (INIT ^ TERMINATOR)
 ).setParseAction(parseASVariable)
+VARIABLE_INITIALIZATION = (
+    IDENTIFIER('name')
+    + (INIT ^ TERMINATOR)
+)
+BLOCK = Suppress(nestedExpr("{","}"))
+# BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG('metatag') ^ INCLUDE_DEFINITION
+# 加上静态初始化块
+BASE_BLOCK = USE_NAMESPACE ^ INCLUDE_DEFINITION ^ BLOCK ^ VARIABLE_INITIALIZATION
 # 方法相关的语法
 METHOD_MODIFIER = (
     Optional(KEYWORDS['static']('static'))
@@ -351,7 +396,7 @@ CLASS_BLOCK = (
     )
     + RCURL # }
 )
-CLASS_EXTENDS = KEYWORDS['extends'] + QUALIFIED_IDENTIFIER("extends")
+CLASS_EXTENDS = KEYWORDS['extends'] + QUALIFIED_IDENTIFIER('extends')
 INTERFACE_EXTENDS = KEYWORDS['extends'] + delimitedList(QUALIFIED_IDENTIFIER)
 BASE_MODIFIERS = KEYWORDS['internal'] ^ KEYWORDS['public']
 CLASS_MODIFIERS = (
@@ -374,23 +419,32 @@ INTERFACE_BLOCK = (
     + ZeroOrMore(
         IMPORT_DEFINITION
         ^ BASE_BLOCK
-        ^ VARIABLE_DEFINITION
-        ^ (METHOD_SIGNATURE + TERMINATOR)
+        ^ VARIABLE_DEFINITION.setResultsName('variables', listAllMatches=True)
+        ^ (METHOD_SIGNATURE + TERMINATOR).setParseAction(
+                parseASVirtualMethod
+            ).setResultsName(
+                'methods', listAllMatches=True
+            )
     )
     + RCURL # }
 )
 INTERFACE_DEFINITION = (
     Optional(BASE_MODIFIERS)
-    + KEYWORDS['interface'] + QUALIFIED_IDENTIFIER
+    + KEYWORDS['interface']
+    + QUALIFIED_IDENTIFIER('name')
     + Optional(INTERFACE_EXTENDS)
     + INTERFACE_BLOCK
-)
+).setParseAction(parseASInterface)
 # 包相关的语法
 PACKAGE_BLOCK = (
     LCURL   # {
     + ZeroOrMore(IMPORT_DEFINITION)('imports')
     + ZeroOrMore(USE_NAMESPACE)('use_namespace')
-    + (CLASS_DEFINITION('class_') ^ INTERFACE_DEFINITION('interface'))
+    + (
+        CLASS_DEFINITION('class_')
+        ^ INTERFACE_DEFINITION('interface')
+        ^ NAMESPACE_DEFINITION
+    )
     + RCURL # }
 )
 PACKAGE_DEFINITION = (

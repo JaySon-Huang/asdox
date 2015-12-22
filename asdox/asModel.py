@@ -28,20 +28,20 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-class Documentable:
+class Documentable(object):
     "Actionscript Object that allows for JavaDoc declaration"
     pass
 
-class Visible:
+class Visible(object):
     def __init__(self):
         self.visibility = "internal"
 
-class MetaTagable:
+class MetaTagable(object):
     "Actionscript Object that allows for MetaTags"
     def __init__(self):
         self.metadata = []
 
-class ASType:
+class ASType(object):
     "Actionscript 3 Type"
 
     def __init__(self, name, type_):
@@ -51,7 +51,7 @@ class ASType:
     def __repr__(self):
         return '<ASType: {0}>'.format(self.name)
 
-class ASVariable(ASType,Visible,MetaTagable):
+class ASVariable(ASType, Visible, MetaTagable):
     "Actionscript 3 Variable"
 
     def __init__(self, name='', type_='*'):
@@ -66,7 +66,7 @@ class ASVariable(ASType,Visible,MetaTagable):
     def __repr__(self):
         return '<ASVariable: {0}>'.format(self.name)
 
-class ASMetaTag:
+class ASMetaTag(object):
     "Actionscript MetaTag Definition"
 
     def __init__(self, name=''):
@@ -90,6 +90,18 @@ class ASMethod(ASType, Visible, MetaTagable):
 
     def __repr__(self):
         return '<ASMethod: {0}>'.format(self.name)
+
+class ASVirtualMethod(ASMethod):
+    "Actionscript Virtual Method Definition"
+
+    def __init__(self, name='', type_='void'):
+        self.name = name
+        self.type_ = type_
+        self.metadata = []
+        self.arguments = {}
+
+    def __repr__(self):
+        return '<ASVirtualMethod: {0}>'.format(self.name)
 
 class ASClass(Visible,MetaTagable):
     "Actionscript Class Definition"
