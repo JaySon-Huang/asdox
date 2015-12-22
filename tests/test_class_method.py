@@ -171,6 +171,26 @@ class ASMethodTestCase(BaseTestCase):
         self.assertEqual(cls.methods["sayHi"].name, "sayHi")
         self.assertEqual(cls.methods["sayHi"].visibility, "public")
 
+
+    def testMethodStatic(self):
+        self.builder.addSource('''
+        package com.gurufaction.asdox
+        {
+            public class MyClass
+            {
+                public static function sayHi():String
+                {
+                }
+            }
+        }
+        ''')
+        pkg = self.builder.packages["com.gurufaction.asdox"]
+        # from IPython import embed;embed();
+        cls = pkg.classes["MyClass"]
+        self.assertEqual(cls.methods["sayHi"].name, "sayHi")
+        self.assertEqual(cls.methods["sayHi"].visibility, "public")
+        self.assertEqual(cls.methods['sayHi'].isStatic, True)
+
     def testMethodOverriding(self):
         '''Parse overridden class method'''
         self.builder.addSource("""
@@ -208,14 +228,15 @@ class ASMethodTestCase(BaseTestCase):
         """)
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
-        self.assertEqual(cls.methods["addIntegers"].name, "addIntegers")
-        self.assertEqual(cls.methods["addIntegers"].type_, "int")
-        self.assertEqual(cls.methods["addIntegers"].visibility, "public")
-        self.assertEqual(cls.methods["addIntegers"].isOverride, False)
-        self.assertEqual(cls.methods["addIntegers"].arguments["num1"].name, "num1")
-        self.assertEqual(cls.methods["addIntegers"].arguments["num1"].type_, "int")
-        self.assertEqual(cls.methods["addIntegers"].arguments["num2"].name, "num2")
-        self.assertEqual(cls.methods["addIntegers"].arguments["num2"].type_, "int")
+        m = cls.methods["addIntegers"]
+        self.assertEqual(m.name, "addIntegers")
+        self.assertEqual(m.type_, "int")
+        self.assertEqual(m.visibility, "public")
+        self.assertEqual(m.isOverride, False)
+        self.assertEqual(m.arguments["num1"].name, "num1")
+        self.assertEqual(m.arguments["num1"].type_, "int")
+        self.assertEqual(m.arguments["num2"].name, "num2")
+        self.assertEqual(m.arguments["num2"].type_, "int")
 
     def testMethodMultiLineComment(self):
         '''Parse class method with multi-line comment.'''
@@ -286,7 +307,10 @@ class ASMethodTestCase(BaseTestCase):
         self.assertEqual(cls.methods["getName"].type_, "String")
         self.assertEqual(cls.methods["getName"].visibility, "public")
         self.assertEqual(cls.methods["getName"].isOverride, False)
-        self.assertEqual(cls.methods["getName"].metadata[0].name, "Inspectable")
+        self.assertEqual(
+            cls.methods["getName"].metadata[0].name,
+            "Inspectable"
+        )
         self.assertEqual(
             cls.methods["getName"].metadata[0].params,
             {'environment': 'none'}
@@ -317,12 +341,13 @@ class ASMethodTestCase(BaseTestCase):
         """)
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
-        self.assertEqual(cls.variables["labelPlacement"].name, "labelPlacement")
-        self.assertEqual(cls.variables["labelPlacement"].type_, "String")
-        self.assertEqual(cls.variables["labelPlacement"].visibility, "public")
-        self.assertEqual(cls.variables["labelPlacement"].readable, True)
-        self.assertEqual(cls.variables["labelPlacement"].writable, False)
-        self.assertEqual(cls.variables["labelPlacement"].isProperty, True)
+        v = cls.variables["labelPlacement"]
+        self.assertEqual(v.name, "labelPlacement")
+        self.assertEqual(v.type_, "String")
+        self.assertEqual(v.visibility, "public")
+        self.assertEqual(v.readable, True)
+        self.assertEqual(v.writable, False)
+        self.assertEqual(v.isProperty, True)
 
     @unittest.skip('FIXME: setter')
     def testMethodSetter(self):
@@ -341,12 +366,13 @@ class ASMethodTestCase(BaseTestCase):
         """)
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
-        self.assertEqual(cls.variables["labelPlacement"].name, "labelPlacement")
-        self.assertEqual(cls.variables["labelPlacement"].type_, "String")
-        self.assertEqual(cls.variables["labelPlacement"].visibility, "public")
-        self.assertEqual(cls.variables["labelPlacement"].readable, False)
-        self.assertEqual(cls.variables["labelPlacement"].writable, True)
-        self.assertEqual(cls.variables["labelPlacement"].isProperty, True)
+        v = cls.variables["labelPlacement"]
+        self.assertEqual(v.name, "labelPlacement")
+        self.assertEqual(v.type_, "String")
+        self.assertEqual(v.visibility, "public")
+        self.assertEqual(v.readable, False)
+        self.assertEqual(v.writable, True)
+        self.assertEqual(v.isProperty, True)
 
     @unittest.skip('FIXME: getter/setter')
     def testMethodGetterAndSetter(self):
@@ -397,7 +423,9 @@ class ASMethodTestCase(BaseTestCase):
                         if (toggle)
                             dispatchEvent(new Event(Event.CHANGE));
 
-                        dispatchEvent(new FlexEvent(FlexEvent.VALUE_COMMIT));
+                        dispatchEvent(
+                            new FlexEvent(FlexEvent.VALUE_COMMIT)
+                        );
                     }
                 }
             }
@@ -405,10 +433,11 @@ class ASMethodTestCase(BaseTestCase):
         """)
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
-        self.assertEqual(cls.methods["setSelected"].name, "setSelected")
-        self.assertEqual(cls.methods["setSelected"].type_, "void")
-        self.assertEqual(cls.methods["setSelected"].visibility, "mx_internal")
-        self.assertEqual(cls.methods["setSelected"].isOverride, False)
+        m = cls.methods["setSelected"]
+        self.assertEqual(m.name, "setSelected")
+        self.assertEqual(m.type_, "void")
+        self.assertEqual(m.visibility, "mx_internal")
+        self.assertEqual(m.isOverride, False)
         self.assertEqual(
             cls.methods["setSelected"].arguments["value"].name,
             "value"
