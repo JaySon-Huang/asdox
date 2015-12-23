@@ -34,17 +34,20 @@ class Documentable(object):
 
 class Visible(object):
     def __init__(self):
+        super(Visible, self).__init__()
         self.visibility = "internal"
 
 class MetaTagable(object):
     "Actionscript Object that allows for MetaTags"
     def __init__(self):
+        super(MetaTagable, self).__init__()
         self.metadata = []
 
 class ASType(object):
     "Actionscript 3 Type"
 
     def __init__(self, name, type_):
+        super(ASType, self).__init__()
         self.name = name
         self.type_ = type_
 
@@ -55,10 +58,9 @@ class ASVariable(ASType, Visible, MetaTagable):
     "Actionscript 3 Variable"
 
     def __init__(self, name='', type_='*'):
-        ASType.__init__(self, name, type_)
+        super(ASVariable, self).__init__(name, type_)
         self.isStatic = False
         self.isConstant = False
-        self.metadata = []
         self.readable = False
         self.writable = False
         self.isProperty = False
@@ -79,13 +81,12 @@ class ASMetaTag(object):
 class ASMethod(ASType, Visible, MetaTagable):
     "Actionscript Method Definition"
 
-    def __init__(self, name='', type_='void'):
+    def __init__(self, name='', return_type='void'):
+        super(ASMethod, self).__init__(name, 'function')
         self.isOverride = False
         self.isFinal = False
         self.isStatic = False
-        self.name = name
-        self.type_ = type_
-        self.metadata = []
+        self.return_type = return_type
         self.arguments = {}
 
     def __repr__(self):
@@ -94,21 +95,19 @@ class ASMethod(ASType, Visible, MetaTagable):
 class ASVirtualMethod(ASMethod):
     "Actionscript Virtual Method Definition"
 
-    def __init__(self, name='', type_='void'):
+    def __init__(self, name='', return_type='void'):
+        super(ASVirtualMethod, self).__init__(name, return_type)
         self.name = name
-        self.type_ = type_
-        self.metadata = []
-        self.arguments = {}
+        self.type_ = 'virtual function'
 
     def __repr__(self):
         return '<ASVirtualMethod: {0}>'.format(self.name)
 
-class ASClass(Visible,MetaTagable):
+class ASClass(ASType, Visible, MetaTagable):
     "Actionscript Class Definition"
 
-    def __init__(self, name = ''):
-        self.name = name
-        self.metadata = []
+    def __init__(self, name):
+        super(ASClass, self).__init__(name, 'class')
         self.variables = {}
         self.methods = {}
         self.extends = ''
@@ -120,12 +119,11 @@ class ASClass(Visible,MetaTagable):
     def __repr__(self):
         return '<ASClass: {0}>'.format(self.name)
 
-class ASPackage(Visible, MetaTagable):
+class ASPackage(ASType, Visible, MetaTagable):
     "Actionscript Package Definition"
-    
+
     def __init__(self, name=''):
-        self.name = name
-        self.metadata = []
+        super(ASPackage, self).__init__(name, 'package')
         self.classes = {}
         self.imports = []
         self.use_namespace = []

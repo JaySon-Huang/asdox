@@ -208,7 +208,8 @@ class ASMethodTestCase(BaseTestCase):
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
         self.assertEqual(cls.methods["thanks"].name, "thanks")
-        self.assertEqual(cls.methods["thanks"].type_, "String")
+        self.assertEqual(cls.methods["thanks"].type_, 'function')
+        self.assertEqual(cls.methods['thanks'].return_type, 'String')
         self.assertEqual(cls.methods["thanks"].visibility, "public")
         self.assertEqual(cls.methods["thanks"].isOverride, True)
 
@@ -230,7 +231,8 @@ class ASMethodTestCase(BaseTestCase):
         cls = pkg.classes["MyClass"]
         m = cls.methods["addIntegers"]
         self.assertEqual(m.name, "addIntegers")
-        self.assertEqual(m.type_, "int")
+        self.assertEqual(m.type_, 'function')
+        self.assertEqual(m.return_type, 'int')
         self.assertEqual(m.visibility, "public")
         self.assertEqual(m.isOverride, False)
         self.assertEqual(m.arguments["num1"].name, "num1")
@@ -258,7 +260,8 @@ class ASMethodTestCase(BaseTestCase):
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
         self.assertEqual(cls.methods["getName"].name, "getName")
-        self.assertEqual(cls.methods["getName"].type_, "String")
+        self.assertEqual(cls.methods["getName"].type_, 'function')
+        self.assertEqual(cls.methods["getName"].return_type, 'String')
         self.assertEqual(cls.methods["getName"].visibility, "public")
         self.assertEqual(cls.methods["getName"].isOverride, False)
 
@@ -280,7 +283,8 @@ class ASMethodTestCase(BaseTestCase):
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
         self.assertEqual(cls.methods["getName"].name, "getName")
-        self.assertEqual(cls.methods["getName"].type_, "String")
+        self.assertEqual(cls.methods["getName"].type_, 'function')
+        self.assertEqual(cls.methods["getName"].return_type, 'String')
         self.assertEqual(cls.methods["getName"].visibility, "public")
         self.assertEqual(cls.methods["getName"].isOverride, False)
 
@@ -304,7 +308,8 @@ class ASMethodTestCase(BaseTestCase):
         pkg = self.builder.packages["com.gurufaction.asdox"]
         cls = pkg.classes["MyClass"]
         self.assertEqual(cls.methods["getName"].name, "getName")
-        self.assertEqual(cls.methods["getName"].type_, "String")
+        self.assertEqual(cls.methods["getName"].type_, 'function')
+        self.assertEqual(cls.methods["getName"].return_type, 'String')
         self.assertEqual(cls.methods["getName"].visibility, "public")
         self.assertEqual(cls.methods["getName"].isOverride, False)
         self.assertEqual(
@@ -435,7 +440,8 @@ class ASMethodTestCase(BaseTestCase):
         cls = pkg.classes["MyClass"]
         m = cls.methods["setSelected"]
         self.assertEqual(m.name, "setSelected")
-        self.assertEqual(m.type_, "void")
+        self.assertEqual(m.type_, 'function')
+        self.assertEqual(m.return_type, 'void')
         self.assertEqual(m.visibility, "mx_internal")
         self.assertEqual(m.isOverride, False)
         self.assertEqual(
