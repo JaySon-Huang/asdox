@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # encoding=utf-8
 
+from __future__ import print_function
+
 from pyparsing import ParseResults
 from asModel import (
     ASClass, ASPackage, ASMetaTag,
@@ -11,12 +13,21 @@ from asModel import (
 _isTracing = False
 # _isTracing = True
 
+def find_match_token(tokens, name):
+    for token in tokens:
+        if not isinstance(token, tuple):
+            continue
+        if token[0] == name:
+            return token
+    else:
+        raise Exception('expected name: {0} not exists.'.format(name))
+
 def parseASPackage(s, location, tokens):
     # from IPython import embed;embed();
     if _isTracing:
         print('parseASPackage[{0}] @ loc({1})'.format(tokens.name, location))
-    pkg = ASPackage()
-    pkg.name = tokens.name
+    # from IPython import embed;embed();
+    pkg = ASPackage(tokens.name)
     if tokens.imports:
         pkg.imports += tokens.imports.asList()
     if tokens.use_namespace:
@@ -24,6 +35,10 @@ def parseASPackage(s, location, tokens):
     # 定义的类
     if tokens.class_:
         cls = tokens.class_[0]
+        if pkg.name:
+            cls.full_name = pkg.name + '.' + cls.name
+        else:
+            cls.full_name = cls.name
         pkg.classes[cls.name] = cls
     # 定义的接口
     if tokens.interface:
@@ -34,6 +49,7 @@ def parseASPackage(s, location, tokens):
 def parseASClass(s, location, tokens):
     if _isTracing:
         print('parseASClass[{0}] @ loc({1})'.format(tokens.name, location))
+    # from IPython import embed;embed();
     cls = ASClass(tokens.name)
     # 基类 & 接口
     cls.extends = tokens.extends
@@ -58,9 +74,23 @@ def parseASClass(s, location, tokens):
     # methods
     for method in tokens.methods:
         method = method[0]
-        cls.methods[method.name] = method
-        # TODO: getter/setter 对相关变量属性进行设置
-    # from IPython import embed;embed();
+        if not method.accessor:
+            cls.methods[method.name] = method
+        else:
+            # getter/setter 对相关变量属性进行设置
+            # if method.name not in cls.variables:
+            #     cls.variables[method.name] = ASVariable(method.name)
+            # v = cls.variables[method.name]
+            if method.accessor == 'get':
+                cls.getter_methods[method.name] = method
+                # v.readable = True
+                # v.type_ = method.return_type
+            elif method.accessor == 'set':
+                cls.setter_methods[method.name] = method
+                # v.writable = True
+                # v.type_ = method.arguments.values()[0].type_
+            # v.visibility = method.visibility
+            # v.isProperty = True
     return ParseResults(cls)
 
 def parseASInterface(s, location, tokens):
@@ -123,6 +153,7 @@ def parseASMethod(s, location, tokens):
         method = ASMethod(tokens.name, tokens.type_)
     else:
         method = ASMethod(tokens.name)
+    # from IPython imtport embed;embed();
     # 可见域
     if tokens.visibility:
         method.visibility = tokens.visibility
@@ -135,19 +166,19 @@ def parseASMethod(s, location, tokens):
         method.isFinal = True
     if tokens.static:
         method.isStatic = True
+    if tokens.accessor:
+        method.accessor = tokens.accessor
     # method 传入参数
     for arg in tokens.arguments:
         method.arguments[arg.name] = arg
-    # from IPython import embed;embed();
     return ParseResults(method)
 
 def parseASVariable(s, location, tokens):
     if _isTracing:
         print('parseASVariable[{0}] @ loc({1})'.format(tokens.name, location))
     var = ASVariable(tokens.name, tokens.type_)
-    if tokens.visibility == '':
-        var.visibility = 'internal'
-    else:
+    # from IPython import embed;embed();
+    if tokens.visibility:
         var.visibility = tokens.visibility
     # 静态量
     if tokens.static == 'static':
@@ -160,9 +191,8 @@ def parseASVariable(s, location, tokens):
     else:
         var.readable = True
         var.writable = True
-    # from IPython import embed;embed();
     return ParseResults(var)
 
-def debug(s, location, tokens):
-    from IPython import embed;embed();
-
+def debug(s, location, tokens, name):
+    return (tokens.__getattr__(name), location)
+    # from IPython import embed;embed();

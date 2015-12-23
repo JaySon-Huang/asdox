@@ -86,6 +86,7 @@ class ASMethod(ASType, Visible, MetaTagable):
         self.isOverride = False
         self.isFinal = False
         self.isStatic = False
+        self.accessor = None
         self.return_type = return_type
         self.arguments = {}
 
@@ -110,6 +111,8 @@ class ASClass(ASType, Visible, MetaTagable):
         super(ASClass, self).__init__(name, 'class')
         self.variables = {}
         self.methods = {}
+        self.getter_methods = {}
+        self.setter_methods = {}
         self.extends = ''
         self.implements = []
         self.isDynamic = False
@@ -122,7 +125,7 @@ class ASClass(ASType, Visible, MetaTagable):
 class ASPackage(ASType, Visible, MetaTagable):
     "Actionscript Package Definition"
 
-    def __init__(self, name=''):
+    def __init__(self, name):
         super(ASPackage, self).__init__(name, 'package')
         self.classes = {}
         self.imports = []

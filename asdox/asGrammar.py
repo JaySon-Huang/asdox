@@ -29,6 +29,8 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+from functools import partial
+
 from pyparsing import *
 from asAction import (
     parseASPackage,
@@ -40,6 +42,7 @@ from asAction import (
     parseASArg,
     parseASMethod,
     parseASVariable,
+    debug,
 )
 
 KEYWORDS = {}
@@ -158,7 +161,10 @@ IMPORT_DEFINITION = (
     KEYWORDS['import']
     + Combine(
         QUALIFIED_IDENTIFIER
-        + Optional(DOT + STAR))('name')
+        + Optional(DOT + STAR)
+    ).setResultsName(
+        'name'
+    )
     + TERMINATOR
 ).setParseAction(parseImports)
 
@@ -208,7 +214,7 @@ METHOD_PARAMETER = (
     + TYPE
     + Optional(EQUAL + VALUE)
 ).setParseAction(parseASArg)
-METHOD_PARAMETERS = delimitedList(METHOD_PARAMETER)#.setDebug()
+METHOD_PARAMETERS = delimitedList(METHOD_PARAMETER)
 METHOD_SIGNATURE = (
     KEYWORDS['function']
     # getter, setter
@@ -229,7 +235,7 @@ METHOD_DEFINITION = (
     + Optional(METHOD_MODIFIER)
     + METHOD_SIGNATURE
     + BLOCK
-).setParseAction(parseASMethod)#.setDebug()
+).setParseAction(parseASMethod)
 # 类相关的语法
 CLASS_IMPLEMENTS = (
     KEYWORDS['implements']
@@ -247,8 +253,14 @@ CLASS_BLOCK = (
     )
     + RCURL # }
 )
-CLASS_EXTENDS = KEYWORDS['extends'] + QUALIFIED_IDENTIFIER('extends')
-INTERFACE_EXTENDS = KEYWORDS['extends'] + delimitedList(QUALIFIED_IDENTIFIER)
+CLASS_EXTENDS = (
+    KEYWORDS['extends']
+    + QUALIFIED_IDENTIFIER('extends')
+)
+INTERFACE_EXTENDS = (
+    KEYWORDS['extends']
+    + delimitedList(QUALIFIED_IDENTIFIER)
+)
 BASE_MODIFIERS = KEYWORDS['internal'] ^ KEYWORDS['public']
 CLASS_MODIFIERS = (
     Optional(KEYWORDS['final']('final'))
