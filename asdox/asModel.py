@@ -66,7 +66,14 @@ class ASVariable(ASType, Visible, MetaTagable):
         self.isProperty = False
 
     def __repr__(self):
-        return '<ASVariable: {0}>'.format(self.name)
+        return '<ASVariable({1}): {0}>'.format(
+            self.name,
+            self.type_
+        )
+
+    def toSourceCode(self):
+        'public/private var/const <name>:<type> '
+        return 
 
 class ASMetaTag(object):
     "Actionscript MetaTag Definition"

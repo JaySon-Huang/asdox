@@ -26,10 +26,10 @@ def parseASPackage(s, location, tokens):
     # from IPython import embed;embed();
     if _isTracing:
         print('parseASPackage[{0}] @ loc({1})'.format(tokens.name, location))
-    # from IPython import embed;embed();
     pkg = ASPackage(tokens.name)
     if tokens.imports:
-        pkg.imports += tokens.imports.asList()
+        tokens.imports = tokens.imports.asList()
+        pkg.imports += tokens.imports
     if tokens.use_namespace:
         pkg.use_namespace += tokens.use_namespace.asList()
     # 定义的类
@@ -44,6 +44,14 @@ def parseASPackage(s, location, tokens):
     if tokens.interface:
         cls = tokens.interface[0]
         pkg.classes[cls.name] = cls
+    # 把成员变量类名替换为全名
+    for var in cls.variables.values():
+        for imported_cls in tokens.imports:
+            imported_cls_name = imported_cls.split('.')[-1]
+            if var.type_ == imported_cls_name:
+                var.type_ = imported_cls
+                break
+    # from IPython import embed;embed();
     return pkg
 
 def parseASClass(s, location, tokens):
