@@ -58,3 +58,6 @@ target/
 
 # my own cipher
 cipher/
+
+# PyCharm
+.idea/
