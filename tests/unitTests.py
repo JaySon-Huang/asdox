@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#encoding=utf-8
+# encoding=utf-8
 
 import unittest
 
@@ -9,7 +9,7 @@ def suite():
         'test_package', 'test_class',
         'test_class_field', 'test_class_method',
         'test_builder', 'test_parsing_files',
-    ) # and so on
+    )  # and so on
     alltests = unittest.TestSuite()
     for module in map(__import__, modules_to_test):
         alltests.addTest(unittest.findTestCases(module))

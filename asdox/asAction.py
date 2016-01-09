@@ -6,24 +6,16 @@ from __future__ import print_function
 from pyparsing import ParseResults
 from asModel import (
     ASClass, ASPackage, ASMetaTag,
-    ASVirtualMethod, ASMethod,
+    ASVirtualMethod, ASMethod, ASMetodBody,
     ASType, ASVariable,
+    ASImport,
 )
 
 _isTracing = False
 # _isTracing = True
 
-def find_match_token(tokens, name):
-    for token in tokens:
-        if not isinstance(token, tuple):
-            continue
-        if token[0] == name:
-            return token
-    else:
-        raise Exception('expected name: {0} not exists.'.format(name))
 
 def parseASPackage(s, location, tokens):
-    # from IPython import embed;embed();
     if _isTracing:
         print('parseASPackage[{0}] @ loc({1})'.format(tokens.name, location))
     pkg = ASPackage(tokens.name)
@@ -32,6 +24,7 @@ def parseASPackage(s, location, tokens):
         pkg.imports += tokens.imports
     if tokens.use_namespace:
         pkg.use_namespace += tokens.use_namespace.asList()
+    cls = None
     # 定义的类
     if tokens.class_:
         cls = tokens.class_[0]
@@ -47,17 +40,17 @@ def parseASPackage(s, location, tokens):
     # 把成员变量类名替换为全名
     for var in cls.variables.values():
         for imported_cls in tokens.imports:
-            imported_cls_name = imported_cls.split('.')[-1]
+            imported_cls_name = imported_cls.name.split('.')[-1]
             if var.type_ == imported_cls_name:
                 var.type_ = imported_cls
                 break
-    # from IPython import embed;embed();
+    pkg.setTokens(tokens)
     return pkg
+
 
 def parseASClass(s, location, tokens):
     if _isTracing:
         print('parseASClass[{0}] @ loc({1})'.format(tokens.name, location))
-    # from IPython import embed;embed();
     cls = ASClass(tokens.name)
     # 基类 & 接口
     cls.extends = tokens.extends
@@ -99,7 +92,9 @@ def parseASClass(s, location, tokens):
                 # v.type_ = method.arguments.values()[0].type_
             # v.visibility = method.visibility
             # v.isProperty = True
+    cls.setTokens(tokens)
     return ParseResults(cls)
+
 
 def parseASInterface(s, location, tokens):
     if _isTracing:
@@ -110,25 +105,17 @@ def parseASInterface(s, location, tokens):
         method = method[0]
         cls.methods[method.name] = method
         # TODO: getter/setter 对相关变量属性进行设置
-    # from IPython import embed;embed();
+    cls.setTokens(tokens)
     return ParseResults(cls)
 
-def parseASVirtualMethod(s, location, tokens):
-    if _isTracing:
-        print('parseASVirtualMethod[{0}] @ loc({1})'.format(tokens.name, location))
-    if tokens.type_:
-        method = ASVirtualMethod(tokens.name, tokens.type_)
-    else:
-        method = ASVirtualMethod(tokens.name)
-    # method 传入参数
-    for arg in tokens.arguments:
-        method.arguments[arg.name] = arg
-    return ParseResults(method)
 
 def parseImports(s, location, tokens):
     if _isTracing:
         print('parseImports[{0}] @ loc({1})'.format(tokens.name, location))
-    return tokens.name
+    imp = ASImport(tokens.name)
+    imp.setTokens(tokens)
+    return imp
+
 
 def parseASMetaTag(s, location, tokens):
     if _isTracing:
@@ -140,18 +127,18 @@ def parseASMetaTag(s, location, tokens):
             metatag.params[index] = attr.value
         else:
             metatag.params[attr.key] = attr.value
-        index = index + 1
+        index += 1
+    metatag.setTokens(tokens)
     return ParseResults(metatag)
 
-def parseJavaDoc(s, location, tokens):
-    pass
 
 def parseASArg(s, location, tokens):
     if _isTracing:
         print('parseASArg[{0}] @ loc({1})'.format(tokens.name, location))
-        # from IPython import embed;embed();
     arg = ASType(tokens.name, tokens.type_)
+    arg.setTokens(tokens)
     return arg
+
 
 def parseASMethod(s, location, tokens):
     if _isTracing:
@@ -161,7 +148,6 @@ def parseASMethod(s, location, tokens):
         method = ASMethod(tokens.name, tokens.type_)
     else:
         method = ASMethod(tokens.name)
-    # from IPython imtport embed;embed();
     # 可见域
     if tokens.visibility:
         method.visibility = tokens.visibility
@@ -179,13 +165,36 @@ def parseASMethod(s, location, tokens):
     # method 传入参数
     for arg in tokens.arguments:
         method.arguments[arg.name] = arg
+    # 方法体
+    method.body = tokens.body[0]
+    method.setTokens(tokens)
     return ParseResults(method)
+
+
+def parseASVirtualMethod(s, location, tokens):
+    if _isTracing:
+        print('parseASVirtualMethod[{0}] @ loc({1})'.format(tokens.name, location))
+    if tokens.type_:
+        method = ASVirtualMethod(tokens.name, tokens.type_)
+    else:
+        method = ASVirtualMethod(tokens.name)
+    # method 传入参数
+    for arg in tokens.arguments:
+        method.arguments[arg.name] = arg
+    method.setTokens(tokens)
+    return ParseResults(method)
+
+
+def parseASMethodBody(s, location, tokens):
+    if _isTracing:
+        print('parseASMethodBody @ loc({1})').format(location)
+    return ParseResults(ASMetodBody(tokens))
+
 
 def parseASVariable(s, location, tokens):
     if _isTracing:
         print('parseASVariable[{0}] @ loc({1})'.format(tokens.name, location))
     var = ASVariable(tokens.name, tokens.type_)
-    # from IPython import embed;embed();
     if tokens.visibility:
         var.visibility = tokens.visibility
     # 静态量
@@ -199,8 +208,5 @@ def parseASVariable(s, location, tokens):
     else:
         var.readable = True
         var.writable = True
+    var.setTokens(tokens)
     return ParseResults(var)
-
-def debug(s, location, tokens, name):
-    return (tokens.__getattr__(name), location)
-    # from IPython import embed;embed();

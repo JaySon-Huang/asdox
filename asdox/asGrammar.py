@@ -28,10 +28,13 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
-from functools import partial
-
-from pyparsing import *
+import pyparsing
+from pyparsing import (
+    Keyword, Literal, CaselessLiteral, Word,
+    Combine, ZeroOrMore, Regex, Optional,
+    QuotedString, nestedExpr,
+    delimitedList,
+)
 from asAction import (
     parseASPackage,
     parseASClass,
@@ -42,44 +45,39 @@ from asAction import (
     parseASArg,
     parseASMethod,
     parseASVariable,
-    debug,
+    parseASMethodBody,
 )
 
-KEYWORDS = {}
-KEYWORDS['package'] = Keyword('package')
-KEYWORDS['class'] = Keyword('class')
-KEYWORDS['implements'] = Keyword('implements').suppress()
-KEYWORDS['extends'] = Keyword('extends').suppress()
-KEYWORDS['function'] = Keyword('function').suppress()
-KEYWORDS['import'] = Keyword('import').suppress()
-KEYWORDS['include'] = Keyword('include').suppress()
-KEYWORDS['interface'] = Keyword('interface')
+KEYWORDS = {
+    'package': Keyword('package'),
+    'class': Keyword('class'),
+    'implements': Keyword('implements'),
+    'extends': Keyword('extends'),
+    'function': Keyword('function'),
+    'import': Keyword('import'),
+    'include': Keyword('include'),
+    'interface': Keyword('interface'),
+    'internal': Keyword('internal'),
+    'public': Keyword('public'),
+    'private': Keyword('private'),
+    'protected': Keyword('protected'),
+    'mxinternal': Keyword('mx_internal'),
+    'static': Keyword('static'),
+    'prototype': Keyword('prototype'),
+    'final': Keyword('final'),
+    'override': Keyword('override'),
+    'native': Keyword('native'),
+    'dynamic': Keyword('dynamic'),
+    'use': Keyword('use'),
+    'namespace': Keyword('namespace'),
+    'var': Keyword('var'),
+    'const': Keyword('const'),
+    'get': Keyword('get'),
+    'set': Keyword('set'),
+}
 
-KEYWORDS['internal'] = Keyword('internal')
-KEYWORDS['public'] = Keyword('public')
-KEYWORDS['private'] = Keyword('private')
-KEYWORDS['private'] = Keyword('private')
-KEYWORDS['protected'] = Keyword('protected')
-KEYWORDS['mxinternal'] = Keyword('mx_internal')
-
-KEYWORDS['static'] = Keyword('static')
-KEYWORDS['prototype'] = Keyword('prototype')
-KEYWORDS['final'] = Keyword('final')
-KEYWORDS['override'] = Keyword('override')
-KEYWORDS['native'] = Keyword('native')
-KEYWORDS['dynamic'] = Keyword('dynamic')
-
-KEYWORDS['use'] = Keyword('use')
-KEYWORDS['namespace'] = Keyword('namespace')
-
-KEYWORDS['var'] = Keyword('var')
-KEYWORDS['const'] = Keyword('const')
-
-KEYWORDS['get'] = Keyword('get')
-KEYWORDS['set'] = Keyword('set')
-
-COMMA,COLON,SEMI,EQUAL = list(map(Suppress, ',:;='))
-LPARN,RPARN,LCURL,RCURL,LSQUARE,RSQUARE = list(map(Suppress,'(){}[]'))
+COMMA, COLON, SEMI, EQUAL = list(map(Literal, ',:;='))
+LPARN, RPARN, LCURL, RCURL, LSQUARE, RSQUARE = list(map(Literal, '(){}[]'))
 UNDERSCORE = Literal('_')
 STAR = Literal('*')
 DOT = Literal('.')
@@ -90,18 +88,18 @@ TERMINATOR = Optional(SEMI)
 point = Literal('.')
 e = CaselessLiteral('E')
 plusOrMinus = Literal('+') | Literal('-')
-number = Word(nums)
+number = Word(pyparsing.nums)
 integer = Combine(Optional(plusOrMinus) + number)
 floatnumber = Combine(
     integer
     + Optional(point + Optional(number))
-    + Optional( e + integer )
+    + Optional(e + integer)
 )
-HEX = '0x' + Word(hexnums)
+HEX = '0x' + Word(pyparsing.hexnums)
 
-########################## NEW GRAMMAR DEFINITION ###########################
+'''  NEW GRAMMAR DEFINITION  '''
 # 标识符, 首字母可以为字母或_或$
-IDENTIFIER = Word(alphas+'_'+'$', alphanums+'_')
+IDENTIFIER = Word(pyparsing.alphas + '_' + '$', pyparsing.alphanums + '_')
 QUALIFIED_IDENTIFIER = Combine(
     IDENTIFIER
     + ZeroOrMore(DOT + IDENTIFIER)
@@ -112,21 +110,21 @@ GENERIC_IDENTIFIER = Combine(
     + ZeroOrMore(DOT + '<' + IDENTIFIER + '>')
 )
 # 注释相关
-SINGLE_LINE_COMMENT = dblSlashComment
-MULTI_LINE_COMMENT = cStyleComment
+SINGLE_LINE_COMMENT = pyparsing.dblSlashComment
+MULTI_LINE_COMMENT = pyparsing.cStyleComment
 JAVADOC_COMMENT = (
     Regex(r'/\*\*(?:[^*]*\*+)+?/')
-)#.setParseAction(parseJavaDoc)
+)
 COMMENTS = (
-    SINGLE_LINE_COMMENT#.suppress()
+    SINGLE_LINE_COMMENT
     ^ JAVADOC_COMMENT
-    ^ MULTI_LINE_COMMENT#.suppress()
+    ^ MULTI_LINE_COMMENT
 )
 
 DBL_QUOTED_STRING = QuotedString(quoteChar="\"", escChar='\\')
 SINGLE_QUOTED_STRING = QuotedString(quoteChar="'", escChar='\\')
 ARRAY_INIT = LSQUARE + RSQUARE
-OBJECT_INIT = nestedExpr("{","}")
+OBJECT_INIT = nestedExpr("{", "}")
 VALUE = (
     floatnumber ^ QUALIFIED_IDENTIFIER
     ^ DBL_QUOTED_STRING ^ SINGLE_QUOTED_STRING
@@ -142,8 +140,8 @@ INIT = (
 )
 # 作用域相关
 USE_NAMESPACE = (
-    KEYWORDS['use'].suppress()
-    + KEYWORDS['namespace'].suppress()
+    KEYWORDS['use']
+    + KEYWORDS['namespace']
     + QUALIFIED_IDENTIFIER + TERMINATOR
 )
 NAMESPACE_DEFINITION = (
@@ -173,10 +171,10 @@ ATTRIBUTES = (
     + VALUE("value")
 ).setResultsName("attributes", listAllMatches=True)
 METATAG = (
-    LSQUARE   # [
+    LSQUARE  # [
     + IDENTIFIER('name')
     + Optional(LPARN + delimitedList(ATTRIBUTES) + RPARN)
-    + RSQUARE # ]
+    + RSQUARE  # ]
 ).setParseAction(parseASMetaTag)
 # 变量相关
 TYPE = COLON + (QUALIFIED_IDENTIFIER ^ GENERIC_IDENTIFIER ^ STAR)('type_')
@@ -190,14 +188,13 @@ VARIABLE_DEFINITION = (
     + (KEYWORDS['const'] ^ KEYWORDS['var'])("kind")
     + IDENTIFIER('name')
     + Optional(TYPE)
-    # + Optional(MULTI_LINE_COMMENT)
     + (INIT ^ TERMINATOR)
 ).setParseAction(parseASVariable)
 VARIABLE_INITIALIZATION = (
     IDENTIFIER('name')
     + (INIT ^ TERMINATOR)
 )
-BLOCK = Suppress(nestedExpr("{","}"))
+BLOCK = nestedExpr('{', '}')('block')
 # BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG('metatag') ^ INCLUDE_DEFINITION
 # 加上静态初始化块
 BASE_BLOCK = USE_NAMESPACE ^ INCLUDE_DEFINITION ^ BLOCK ^ VARIABLE_INITIALIZATION
@@ -205,9 +202,9 @@ BASE_BLOCK = USE_NAMESPACE ^ INCLUDE_DEFINITION ^ BLOCK ^ VARIABLE_INITIALIZATIO
 METHOD_MODIFIER = (
     Optional(KEYWORDS['static']('static'))
     & (Optional(KEYWORDS['override']('override'))
-        & Optional(KEYWORDS['final']('final'))
-        & Optional(~KEYWORDS['function'] + IDENTIFIER('visibility'))
-    )
+       & Optional(KEYWORDS['final']('final'))
+       & Optional(~KEYWORDS['function'] + IDENTIFIER('visibility'))
+       )
 )
 METHOD_PARAMETER = (
     IDENTIFIER('name')
@@ -228,30 +225,30 @@ METHOD_SIGNATURE = (
     + Optional(Optional(COMMA) + REST + IDENTIFIER)
     + RPARN  # )
     # 返回值类型
-    + Optional(TYPE)# + Optional(COMMENTS)
+    + Optional(TYPE)
 )
 METHOD_DEFINITION = (
     ZeroOrMore(METATAG)('metatag')
     + Optional(METHOD_MODIFIER)
     + METHOD_SIGNATURE
-    + BLOCK
+    + BLOCK('body').setParseAction(parseASMethodBody)
 ).setParseAction(parseASMethod)
 # 类相关的语法
 CLASS_IMPLEMENTS = (
     KEYWORDS['implements']
     + delimitedList(
         QUALIFIED_IDENTIFIER
-    ).setResultsName("implements")
+    ).setResultsName('implements')
 )
 CLASS_BLOCK = (
-    LCURL   # {
+    LCURL  # {
     + ZeroOrMore(
         IMPORT_DEFINITION
         ^ BASE_BLOCK
         ^ VARIABLE_DEFINITION.setResultsName('variables', listAllMatches=True)
         ^ METHOD_DEFINITION.setResultsName('methods', listAllMatches=True)
     )
-    + RCURL # }
+    + RCURL  # }
 )
 CLASS_EXTENDS = (
     KEYWORDS['extends']
@@ -278,18 +275,18 @@ CLASS_DEFINITION = (
 ).setParseAction(parseASClass)
 # 接口相关的语法
 INTERFACE_BLOCK = (
-    LCURL   # {
+    LCURL  # {
     + ZeroOrMore(
         IMPORT_DEFINITION
         ^ BASE_BLOCK
         ^ VARIABLE_DEFINITION.setResultsName('variables', listAllMatches=True)
         ^ (METHOD_SIGNATURE + TERMINATOR).setParseAction(
-                parseASVirtualMethod
-            ).setResultsName(
-                'methods', listAllMatches=True
-            )
+            parseASVirtualMethod
+        ).setResultsName(
+            'methods', listAllMatches=True
+        )
     )
-    + RCURL # }
+    + RCURL  # }
 )
 INTERFACE_DEFINITION = (
     Optional(BASE_MODIFIERS)
@@ -300,7 +297,7 @@ INTERFACE_DEFINITION = (
 ).setParseAction(parseASInterface)
 # 包相关的语法
 PACKAGE_BLOCK = (
-    LCURL   # {
+    LCURL  # {
     + ZeroOrMore(IMPORT_DEFINITION)('imports')
     + ZeroOrMore(USE_NAMESPACE)('use_namespace')
     + (
@@ -308,18 +305,23 @@ PACKAGE_BLOCK = (
         ^ INTERFACE_DEFINITION('interface')
         ^ NAMESPACE_DEFINITION
     )
-    + RCURL # }
+    + RCURL  # }
 )
 PACKAGE_DEFINITION = (
-    KEYWORDS['package'].suppress()
+    KEYWORDS['package']
     + Optional(QUALIFIED_IDENTIFIER('name'))
     + PACKAGE_BLOCK
 ).setParseAction(parseASPackage)
 # Windows 下文件的 BOM 头
-BOM = Literal('\xEF\xBB\xBF').suppress()
+BOM = Literal('\xEF\xBB\xBF')
 PROGRAM = (
     Optional(BOM)
-    # + ZeroOrMore(COMMENTS)
-    + PACKAGE_DEFINITION
+    + PACKAGE_DEFINITION('package')
 )
 
+MXML_SCRIPT_BLOCK = ZeroOrMore(
+    IMPORT_DEFINITION
+    ^ BASE_BLOCK
+    ^ VARIABLE_DEFINITION.setResultsName('variables', listAllMatches=True)
+    ^ METHOD_DEFINITION.setResultsName('methods', listAllMatches=True)
+)

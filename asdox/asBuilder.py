@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#encoding=utf-8
+# encoding=utf-8
 
 # Copyright (c) 2008, Michael Ramirez
 #
@@ -32,12 +32,17 @@ import re
 import os
 import fnmatch
 
+import pyparsing
+import lxml
+from lxml import etree
+
 import asGrammar
 import asModel
-import pyparsing
 
 
-class TidySourceFile:  
+class TidySourceFile(object):
+    def __init__(self):
+        pass
 
     @staticmethod
     def trim_bomflag(source):
@@ -48,21 +53,19 @@ class TidySourceFile:
     @staticmethod
     def trim_comments(source):
         comments_positions = []
-        asGrammar.COMMENTS.parseWithTabs() # 设置Tab不扩展, 否则下面的字符串位置不符
+        asGrammar.COMMENTS.parseWithTabs()  # 设置Tab不扩展, 否则下面的字符串位置不符
         for _, begin, end in asGrammar.COMMENTS.scanString(source):
             comments_positions.append((begin, end))
         # 从后往前去除注释块
         for begin, end in reversed(comments_positions):
             # print('clearing:')
             # print(source[begin:end])
-            source = ''.join(
-                list(source[:begin]) + list(source[end:])
-            )
+            source = source[:begin] + source[end:]
         return source
 
     @staticmethod
     def tidy(source):
-        # 删除多余的分号 
+        # 删除多余的分号
         source = re.sub(r'^\s*;\s*\n', '', source, flags=re.MULTILINE)
         # 去除行尾多余空白符
         source = re.sub(r'\s+$', '', source, flags=re.MULTILINE)
@@ -78,7 +81,8 @@ class TidySourceFile:
 
 
 class Builder(object):
-    "Actionscript Source Builder"
+    """ActionScript Source Builder"""
+
     sources = []
     packages = {}
 
@@ -99,33 +103,62 @@ class Builder(object):
             # specified pattern.
             if os.path.isdir(source):
                 for filename in self.locate(pattern, source):
-                    print('parsing file: {0} ...'.format(filename))
                     self.parseSource(open(filename, 'rb').read())
             else:
                 # If 'source' is a string append to source list
                 self.parseSource(source)
 
+    def addMXMLSource(self, filename, pkgname):
+        filepath, name = os.path.split(filename)
+        classname, ext = os.path.splitext(name)
+        cls = asModel.ASClass(classname)
+        if pkgname:
+            cls.full_name = pkgname + '.' + classname
+        else:
+            cls.full_name = classname
+        tree = etree.parse(filename)
+        root = tree.getroot()
+        for subroot in root:
+            if isinstance(subroot, lxml.etree._Comment):
+                continue
+            if subroot.tag.endswith('Script'):
+                tokens = asGrammar.MXML_SCRIPT_BLOCK.parseString(subroot.text)
+                for var in [_[0] for _ in tokens.variables.asList()]:
+                    cls.variables[var.name] = var
+
+        if self.packages.get(pkgname) is None:
+            pkg = asModel.ASPackage(pkgname)
+            pkg.classes[cls.name] = cls
+            self.packages[pkg.name] = pkg
+        else:
+            self.packages[pkgname].classes[cls.name] = cls
+
     def parseSource(self, src):
         # 清理注释
         src = TidySourceFile.tidy(TidySourceFile.trim_comments(src))
 
-        self.sources.append(src)
+        # self.sources.append(src)
         # 开始解析
-        pkg = asGrammar.PROGRAM.parseString(src)[0]
-        # try:
-        #     pkg = asGrammar.PROGRAM.parseString(src)[0]
-        # except pyparsing.ParseBaseException as exc:
-        #     from IPython import embed;embed();
-        # 融合多个文件
-        if self.packages.get(pkg.name) is None:
-            self.packages[pkg.name] = pkg
-        else:
-            for imp in pkg.imports:
-                if imp not in self.packages[pkg.name].imports:
-                    self.packages[pkg.name].imports.append(imp)
-            for cls in pkg.classes.values():
-                self.packages[pkg.name].classes[cls.name] = cls
-    
+        try:
+            root = asGrammar.PROGRAM.parseString(src)
+            pkg = root.package
+            # 融合多个文件
+            if self.packages.get(pkg.name) is None:
+                self.packages[pkg.name] = pkg
+            else:
+                for imp in pkg.imports:
+                    if imp.name not in list(map(
+                        lambda imp: imp.name, self.packages[pkg.name].imports
+                    )):
+                        self.packages[pkg.name].imports.append(imp)
+                for cls in pkg.classes.values():
+                    self.packages[pkg.name].classes[cls.name] = cls
+        except pyparsing.ParseBaseException as exc:
+            print('Caught Exception @({0}, {1})!\n{2}'.format(
+                exc.lineno, exc.col, exc.line
+            ))
+            # from IPython import embed;embed();
+
     def locate(self, pattern, root=os.getcwd()):
         for path, dirs, files in os.walk(root):
             matched_filenames = [

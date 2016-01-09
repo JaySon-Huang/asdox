@@ -28,23 +28,36 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 class Documentable(object):
-    "Actionscript Object that allows for JavaDoc declaration"
+    """ActionScript Object that allows for JavaDoc declaration"""
     pass
+
 
 class Visible(object):
     def __init__(self):
         super(Visible, self).__init__()
         self.visibility = "internal"
 
+
 class MetaTagable(object):
-    "Actionscript Object that allows for MetaTags"
+    """ActionScript Object that allows for MetaTags"""
     def __init__(self):
         super(MetaTagable, self).__init__()
         self.metadata = []
 
-class ASType(object):
-    "Actionscript 3 Type"
+
+class FromTokens(object):
+
+    def __init__(self):
+        self.raw_tokens = None
+
+    def setTokens(self, tokens):
+        self.raw_tokens = tokens.asList()
+
+
+class ASType(FromTokens):
+    """ActionScript 3 Type"""
 
     def __init__(self, name, type_):
         super(ASType, self).__init__()
@@ -54,8 +67,13 @@ class ASType(object):
     def __repr__(self):
         return '<ASType: {0}>'.format(self.name)
 
-class ASVariable(ASType, Visible, MetaTagable):
-    "Actionscript 3 Variable"
+    def toTokens(self):
+        for t in self.raw_tokens:
+            yield t
+
+
+class ASVariable(ASType, Visible, MetaTagable, FromTokens):
+    """ActionScript 3 Variable"""
 
     def __init__(self, name='', type_='*'):
         super(ASVariable, self).__init__(name, type_)
@@ -71,22 +89,49 @@ class ASVariable(ASType, Visible, MetaTagable):
             self.type_
         )
 
-    def toSourceCode(self):
-        'public/private var/const <name>:<type> '
-        return 
+    def toTokens(self):
+        for t in self.raw_tokens:
+            yield t
 
-class ASMetaTag(object):
-    "Actionscript MetaTag Definition"
+
+class ASMetaTag(FromTokens):
+    """ActionScript MetaTag Definition"""
 
     def __init__(self, name=''):
+        super(ASMetaTag, self).__init__()
         self.name = name
         self.params = {}
 
     def __repr__(self):
         return '<ASMetaTag: {0}>'.format(self.name)
 
-class ASMethod(ASType, Visible, MetaTagable):
-    "Actionscript Method Definition"
+
+class ASImport(FromTokens):
+    def __init__(self, name):
+        super(ASImport, self).__init__()
+        self.name = name
+
+    def __repr__(self):
+        return '<ASImport: {0}>'.format(self.name)
+
+    def toTokens(self):
+        for t in self.raw_tokens:
+            yield t
+
+
+def flatten_nested_tokens(lst):
+    for elem in lst:
+        if isinstance(elem, list):
+            yield "{"
+            for e in flatten_nested_tokens(elem):
+                yield e
+            yield "}"
+        else:
+            yield elem
+
+
+class ASMethod(ASType, Visible, MetaTagable, FromTokens):
+    """ActionScript Method Definition"""
 
     def __init__(self, name='', return_type='void'):
         super(ASMethod, self).__init__(name, 'function')
@@ -96,12 +141,33 @@ class ASMethod(ASType, Visible, MetaTagable):
         self.accessor = None
         self.return_type = return_type
         self.arguments = {}
+        self.body = None
 
     def __repr__(self):
         return '<ASMethod: {0}>'.format(self.name)
 
+    def toTokens(self):
+        for token in self.raw_tokens:
+            if isinstance(token, str):
+                yield token
+            elif isinstance(token, list):
+                yield "{"
+                for t in flatten_nested_tokens(token):
+                    yield t
+                yield "}"
+            else:
+                for t in token.toTokens():
+                    yield t
+
+
+class ASMetodBody(FromTokens):
+    def __init__(self, tokens):
+        super(ASMetodBody, self).__init__()
+        self.raw_tokens = tokens.asList()
+
+
 class ASVirtualMethod(ASMethod):
-    "Actionscript Virtual Method Definition"
+    """ActionScript Virtual Method Definition"""
 
     def __init__(self, name='', return_type='void'):
         super(ASVirtualMethod, self).__init__(name, return_type)
@@ -111,8 +177,9 @@ class ASVirtualMethod(ASMethod):
     def __repr__(self):
         return '<ASVirtualMethod: {0}>'.format(self.name)
 
-class ASClass(ASType, Visible, MetaTagable):
-    "Actionscript Class Definition"
+
+class ASClass(ASType, Visible, MetaTagable, FromTokens):
+    """ActionScript Class Definition"""
 
     def __init__(self, name):
         super(ASClass, self).__init__(name, 'class')
@@ -129,8 +196,19 @@ class ASClass(ASType, Visible, MetaTagable):
     def __repr__(self):
         return '<ASClass: {0}>'.format(self.name)
 
-class ASPackage(ASType, Visible, MetaTagable):
-    "Actionscript Package Definition"
+    def toTokens(self):
+        for token in self.raw_tokens:
+            if isinstance(token, str):
+                yield token
+            elif isinstance(token, list):
+                continue
+            else:
+                for t in token.toTokens():
+                    yield t
+
+
+class ASPackage(ASType, Visible, MetaTagable, FromTokens):
+    """ActionScript Package Definition"""
 
     def __init__(self, name):
         super(ASPackage, self).__init__(name, 'package')
@@ -141,24 +219,12 @@ class ASPackage(ASType, Visible, MetaTagable):
     def __repr__(self):
         return '<ASPackage: {0}>'.format(self.name)
 
-    def toString(self):
-        print "Package: " + self.name
-        for cls in self.classes.values():
-            print cls.visibility + " class " + cls.name + " implements " + str(cls.implements)
-            for meta in cls.metadata:
-                print "\t\t[" + meta.name + "]"
-            for meth in cls.methods.values():
-                for meta in meth.metadata:
-                    print "\t\t[" + meta.name + "]"
-                print "\t\tMethod: " + meth.visibility + " " + meth.name + ":" + meth.type
-                for arg in meth.arguments.values():
-                    print "\t\t\tArguments: " + arg.name + ":" + arg.type
-            for var in cls.variables.values():
-                for meta in var.metadata:
-                    print "\t\t[" + meta.name + "]"
-                print "\t\tVariables: " + var.visibility + " " + var.name + ":" + var.type
-            for prop in cls.properties.values():
-                for meta in prop.metadata:
-                    print "\t\t[" + meta.name + "]"
-                print "\t\tProperty: " + prop.visibility + " " + prop.name + ":" + prop.type    
-
+    def toTokens(self):
+        for token in self.raw_tokens:
+            if isinstance(token, str):
+                yield token
+            elif isinstance(token, list):
+                continue
+            else:
+                for t in token.toTokens():
+                    yield t

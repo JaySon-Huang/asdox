@@ -51,7 +51,7 @@ class ASPackageTestCase(BaseTestCase):
         """)
         pkg = self.builder.packages["com.gurufaction.asdox"]
         self.assertEqual(
-            pkg.imports,
+            list(map(lambda imp: imp.name, pkg.imports)),
             ['flash.display.DisplayObject',
             'flash.events.*',
             'flash.events.FocusEvent',

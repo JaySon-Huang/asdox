@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-#encoding=utf-8
+# encoding=utf-8
 
 import unittest
 from helper import BaseTestCase
+
 
 class ParsingExternalFileTestCase(BaseTestCase):
     def testFilterClassFile(self):
@@ -12,11 +13,14 @@ class ParsingExternalFileTestCase(BaseTestCase):
         self.builder.addSource("tests/resources/Filter.as")
         self.builder.addSource("tests/resources/Filter2.as")
         pkg = self.builder.packages["com.franklinconnections"]
-        self.assertEqual(pkg.imports,
-            ['mx.collections.ArrayCollection',
-            'mx.controls.Alert',
-            'com.foo2',
-            'com.foo3']
+        self.assertEqual(
+            list(map(lambda imp: imp.name, pkg.imports)),
+            [
+                'mx.collections.ArrayCollection',
+                'mx.controls.Alert',
+                'com.foo2',
+                'com.foo3'
+            ]
         )
         self.assertEqual(pkg.classes["Filter"].name, "Filter")
 
