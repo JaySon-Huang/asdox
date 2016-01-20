@@ -183,6 +183,7 @@ class ASClass(ASType, Visible, MetaTagable, FromTokens):
 
     def __init__(self, name):
         super(ASClass, self).__init__(name, 'class')
+        self.full_name = self.name
         self.variables = {}
         self.methods = {}
         self.getter_methods = {}
