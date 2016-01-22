@@ -173,6 +173,7 @@ class ASVirtualMethod(ASMethod):
         super(ASVirtualMethod, self).__init__(name, return_type)
         self.name = name
         self.type_ = 'virtual function'
+        self.visibility = 'public'
 
     def __repr__(self):
         return '<ASVirtualMethod: {0}>'.format(self.name)
@@ -214,6 +215,7 @@ class ASPackage(ASType, Visible, MetaTagable, FromTokens):
     def __init__(self, name):
         super(ASPackage, self).__init__(name, 'package')
         self.classes = {}
+        self.interfaces = {}
         self.imports = []
         self.use_namespace = []
 

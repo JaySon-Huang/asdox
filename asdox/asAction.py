@@ -24,26 +24,26 @@ def parseASPackage(s, location, tokens):
         pkg.imports += tokens.imports
     if tokens.use_namespace:
         pkg.use_namespace += tokens.use_namespace.asList()
-    cls = None
     # 定义的类
     if tokens.class_:
         cls = tokens.class_[0]
         if pkg.name:
             cls.full_name = pkg.name + '.' + cls.name
-        else:
-            cls.full_name = cls.name
         pkg.classes[cls.name] = cls
+        # 把成员变量类名替换为全名
+        for var in cls.variables.values():
+            for imported_cls in tokens.imports:
+                imported_cls_name = imported_cls.name.split('.')[-1]
+                if var.type_ == imported_cls_name:
+                    var.type_ = imported_cls
+                    break
     # 定义的接口
     if tokens.interface:
-        cls = tokens.interface[0]
-        pkg.classes[cls.name] = cls
-    # 把成员变量类名替换为全名
-    for var in cls.variables.values():
-        for imported_cls in tokens.imports:
-            imported_cls_name = imported_cls.name.split('.')[-1]
-            if var.type_ == imported_cls_name:
-                var.type_ = imported_cls
-                break
+        interface = tokens.interface[0]
+        if pkg.name:
+            interface.full_name = pkg.name + '.' + interface.name
+        pkg.interfaces[interface.name] = interface
+    # tokens
     pkg.setTokens(tokens)
     return pkg
 
@@ -100,11 +100,11 @@ def parseASInterface(s, location, tokens):
     if _isTracing:
         print('parseASInterface[{0}] @ loc({1})'.format(tokens.name, location))
     cls = ASClass(tokens.name)
+    cls.isInterface = True
     # methods
     for method in tokens.methods:
         method = method[0]
         cls.methods[method.name] = method
-        # TODO: getter/setter 对相关变量属性进行设置
     cls.setTokens(tokens)
     return ParseResults(cls)
 

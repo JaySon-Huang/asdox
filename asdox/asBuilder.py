@@ -122,9 +122,16 @@ class Builder(object):
             if isinstance(subroot, lxml.etree._Comment):
                 continue
             if subroot.tag.endswith('Script'):
-                tokens = asGrammar.MXML_SCRIPT_BLOCK.parseString(subroot.text)
-                for var in [_[0] for _ in tokens.variables.asList()]:
-                    cls.variables[var.name] = var
+                try:
+                    tokens = asGrammar.MXML_SCRIPT_BLOCK.parseString(subroot.text)
+                    if tokens.variables:
+                        for var in [_[0] for _ in tokens.variables.asList()]:
+                            cls.variables[var.name] = var
+                except pyparsing.ParseBaseException as exc:
+                    print('Caught Exception @({0}, {1})!\n{2}'.format(
+                        exc.lineno, exc.col, exc.line
+                    ))
+                    from IPython import embed;embed()
 
         if self.packages.get(pkgname) is None:
             pkg = asModel.ASPackage(pkgname)
@@ -157,7 +164,7 @@ class Builder(object):
             print('Caught Exception @({0}, {1})!\n{2}'.format(
                 exc.lineno, exc.col, exc.line
             ))
-            # from IPython import embed;embed();
+            from IPython import embed;embed()
 
     def locate(self, pattern, root=os.getcwd()):
         for path, dirs, files in os.walk(root):
