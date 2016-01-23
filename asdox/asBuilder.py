@@ -160,6 +160,8 @@ class Builder(object):
                         self.packages[pkg.name].imports.append(imp)
                 for cls in pkg.classes.values():
                     self.packages[pkg.name].classes[cls.name] = cls
+                for interface in pkg.interfaces.values():
+                    self.packages[pkg.name].interfaces[interface.name] = interface
         except pyparsing.ParseBaseException as exc:
             print('Caught Exception @({0}, {1})!\n{2}'.format(
                 exc.lineno, exc.col, exc.line
