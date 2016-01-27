@@ -163,7 +163,7 @@ class ASMethod(ASType, Visible, MetaTagable, FromTokens):
 class ASMetodBody(FromTokens):
     def __init__(self, tokens):
         super(ASMetodBody, self).__init__()
-        self.raw_tokens = tokens.asList()
+        self.setTokens(tokens)
 
 
 class ASVirtualMethod(ASMethod):

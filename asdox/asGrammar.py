@@ -95,7 +95,7 @@ floatnumber = Combine(
     + Optional(point + Optional(number))
     + Optional(e + integer)
 )
-HEX = '0x' + Word(pyparsing.hexnums)
+hex_integer = '0x' + Word(pyparsing.hexnums)
 
 '''  NEW GRAMMAR DEFINITION  '''
 # 标识符, 首字母可以为字母或_或$
@@ -128,7 +128,7 @@ OBJECT_INIT = nestedExpr("{", "}")
 VALUE = (
     floatnumber ^ QUALIFIED_IDENTIFIER
     ^ DBL_QUOTED_STRING ^ SINGLE_QUOTED_STRING
-    ^ integer ^ HEX
+    ^ integer ^ hex_integer
 )
 INIT = (
     QuotedString(quoteChar="=", endQuoteChar=";", multiline=True)
@@ -195,7 +195,6 @@ VARIABLE_INITIALIZATION = (
     + (INIT ^ TERMINATOR)
 )
 BLOCK = nestedExpr('{', '}')('block')
-# BASE_BLOCK = USE_NAMESPACE ^ COMMENTS ^ METATAG('metatag') ^ INCLUDE_DEFINITION
 # 加上静态初始化块
 BASE_BLOCK = USE_NAMESPACE ^ INCLUDE_DEFINITION ^ BLOCK ^ VARIABLE_INITIALIZATION
 # 方法相关的语法
