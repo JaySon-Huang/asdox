@@ -34,6 +34,7 @@ from pyparsing import (
     Combine, ZeroOrMore, Regex, Optional,
     QuotedString, nestedExpr,
     delimitedList,
+    Forward,
 )
 from asAction import (
     parseASPackage,
@@ -105,9 +106,10 @@ QUALIFIED_IDENTIFIER = Combine(
     + ZeroOrMore(DOT + IDENTIFIER)
 )
 # 泛型
-GENERIC_IDENTIFIER = Combine(
+GENERIC_IDENTIFIER = Forward()
+GENERIC_IDENTIFIER <<= Combine(
     IDENTIFIER
-    + ZeroOrMore(DOT + '<' + IDENTIFIER + '>')
+    + ZeroOrMore(DOT + '<' + GENERIC_IDENTIFIER + '>')
 )
 # 注释相关
 SINGLE_LINE_COMMENT = pyparsing.dblSlashComment
