@@ -208,5 +208,8 @@ def parseASVariable(s, location, tokens):
     else:
         var.readable = True
         var.writable = True
+    # metatag
+    if tokens.metatag:
+        var.metadata = tokens.metatag.asList()
     var.setTokens(tokens)
     return ParseResults(var)
