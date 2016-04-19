@@ -11,7 +11,7 @@ class ASClassTestCase(BaseTestCase):
         {
             public class MyBasicClass
             {
-                
+
             }
         }
         """)
@@ -31,7 +31,7 @@ class ASClassTestCase(BaseTestCase):
             *
             *  @eventType mx.events.FlexEvent.BUTTON_DOWN
             */
-            
+
             [Event(name="buttonDown", type="mx.events.FlexEvent")]
             public class MyClass
             {
@@ -48,7 +48,6 @@ class ASClassTestCase(BaseTestCase):
             {'type': 'mx.events.FlexEvent', 'name': 'buttonDown'}
         )
 
-    @unittest.skip("FIXME: multiple metadatas")
     def testClassMetaData(self):
         self.builder.addSource("""
         package test{
@@ -65,15 +64,16 @@ class ASClassTestCase(BaseTestCase):
         cls = pkg.classes["MyClass"]
         self.assertEqual(cls.name, "MyClass")
         self.assertEqual(cls.visibility, "public")
-        self.assertEqual(cls.metadata[0].name, "DefaultTriggerEvent")
-        self.assertEqual(cls.metadata[0].params, {0: 'click'})
+        self.assertEqual(cls.metadata[0].name, "Bindable")
+        self.assertEqual(cls.metadata[0].params, {})
         self.assertEqual(cls.metadata[1].name, "Event")
         self.assertEqual(
             cls.metadata[1].params,
             {'name': 'myEnableEvent', 'type':'flash.events.Event'}
         )
-        self.assertEqual(cls.metadata[2].name, "Bindable")
-        self.assertEqual(cls.metadata[2].params, {})
+        self.assertEqual(cls.metadata[2].name, "DefaultTriggerEvent")
+        self.assertEqual(cls.metadata[2].params, {0: 'click'})
+
 
     def testClassInclude(self):
         '''Parse Class with Include statement'''
@@ -123,7 +123,7 @@ class ASClassTestCase(BaseTestCase):
 
     def testInternalClassModifier(self):
         '''Parse for 'internal' class modifier'''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             class MyClass
@@ -137,7 +137,7 @@ class ASClassTestCase(BaseTestCase):
 
     def testPublicClassModifier(self):
         '''Parse for 'public' class modifier'''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             public class MyClass
@@ -150,7 +150,7 @@ class ASClassTestCase(BaseTestCase):
 
     def testDynamicClassModifier(self):
         '''Parse for 'dynamic' class modifier'''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             dynamic class MyClass
@@ -163,7 +163,7 @@ class ASClassTestCase(BaseTestCase):
 
     def testFinalClassModifier(self):
         '''Parse for 'final' class modifier'''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             final class MyClass
@@ -176,7 +176,7 @@ class ASClassTestCase(BaseTestCase):
 
     def testDynamicFinalClassModifier(self):
         '''Parse for 'dynamic final' class modifier'''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             dynamic final class MyClass

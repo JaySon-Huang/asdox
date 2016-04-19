@@ -68,7 +68,7 @@ def parseASClass(s, location, tokens):
         cls.isFinal = True
     # metatag
     if tokens.metatag:
-        cls.metadata.append(tokens.metatag[0])
+        cls.metadata = tokens.metatag.asList()
     for variable in tokens.variables:
         variable = variable[0]
         cls.variables[variable.name] = variable
@@ -167,6 +167,9 @@ def parseASMethod(s, location, tokens):
         method.arguments[arg.name] = arg
     # 方法体
     method.body = tokens.body[0]
+    # metatag
+    if tokens.metatag:
+        method.metadata = tokens.metatag.asList()
     method.setTokens(tokens)
     return ParseResults(method)
 

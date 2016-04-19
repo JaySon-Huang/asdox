@@ -198,7 +198,7 @@ class ASMethodTestCase(BaseTestCase):
         {
             class MyClass
             {
-                public override function thanks():String 
+                public override function thanks():String
                 {
                     return super.thanks() + " nui loa";
                 }
@@ -288,7 +288,6 @@ class ASMethodTestCase(BaseTestCase):
         self.assertEqual(cls.methods["getName"].visibility, "public")
         self.assertEqual(cls.methods["getName"].isOverride, False)
 
-    @unittest.skip('FIXME: multiple metadatas')
     def testMethodMetadata(self):
         '''Parse class method with metadata comment.'''
         self.builder.addSource("""
@@ -314,20 +313,21 @@ class ASMethodTestCase(BaseTestCase):
         self.assertEqual(cls.methods["getName"].isOverride, False)
         self.assertEqual(
             cls.methods["getName"].metadata[0].name,
-            "Inspectable"
-        )
-        self.assertEqual(
-            cls.methods["getName"].metadata[0].params,
-            {'environment': 'none'}
-        )
-        self.assertEqual(
-            cls.methods["getName"].metadata[1].name,
             "Bindable"
         )
         self.assertEqual(
-            cls.methods["getName"].metadata[1].params,
+            cls.methods["getName"].metadata[0].params,
             {0: 'dataChange'}
         )
+        self.assertEqual(
+            cls.methods["getName"].metadata[1].name,
+            "Inspectable"
+        )
+        self.assertEqual(
+            cls.methods["getName"].metadata[1].params,
+            {'environment': 'none'}
+        )
+
 
     @unittest.skip('FIXME: getter')
     def testMethodGetter(self):
@@ -391,7 +391,7 @@ class ASMethodTestCase(BaseTestCase):
                 {
                     return _name;
                 }
-                
+
                 public function set name(name:String):void
                 {
                     _name = name;
@@ -424,7 +424,7 @@ class ASMethodTestCase(BaseTestCase):
                         _selected = value;
 
                         invalidateDisplayList();
-    
+
                         if (toggle)
                             dispatchEvent(new Event(Event.CHANGE));
 

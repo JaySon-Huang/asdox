@@ -9,8 +9,8 @@ class ASFieldTestCase(BaseTestCase):
         '''
         Parse class field.
         '''
-        self.builder.addSource(""" 
-        package 
+        self.builder.addSource("""
+        package
         {
             class MyClass
             {
@@ -31,8 +31,8 @@ class ASFieldTestCase(BaseTestCase):
         '''
         Parse class constant field.
         '''
-        self.builder.addSource(""" 
-        package 
+        self.builder.addSource("""
+        package
         {
             class MyClass
             {
@@ -54,8 +54,8 @@ class ASFieldTestCase(BaseTestCase):
         '''
         Parse class static field.
         '''
-        self.builder.addSource(""" 
-        package 
+        self.builder.addSource("""
+        package
         {
             class MyClass
             {
@@ -75,7 +75,7 @@ class ASFieldTestCase(BaseTestCase):
         '''
         Parse field modifiers
         '''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             class MyClass
@@ -110,7 +110,7 @@ class ASFieldTestCase(BaseTestCase):
         '''
         Parse field initialization
         '''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             class MyClass
@@ -119,7 +119,7 @@ class ASFieldTestCase(BaseTestCase):
                 internal var age:int = 29;
                 internal var salary:Number = 41000.52;
                 internal var isSmart:Boolean = True;
-                internal var _labelPlacement:String = ButtonLabelPlacement.RIGHT; 
+                internal var _labelPlacement:String = ButtonLabelPlacement.RIGHT;
             }
         }
         """)
@@ -157,11 +157,11 @@ class ASFieldTestCase(BaseTestCase):
         '''
         Parse class namespace modifier
         '''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             class MyClass
-            { 
+            {
                 mx_internal var name:String;
             }
         }
@@ -174,18 +174,17 @@ class ASFieldTestCase(BaseTestCase):
         self.assertEqual(cls.variables["name"].name, "name")
         self.assertEqual(cls.variables["name"].type_, "String")
         self.assertEqual(cls.variables["name"].visibility, "mx_internal")
-        self.assertEqual(cls.variables["name"].isConstant, False)   
+        self.assertEqual(cls.variables["name"].isConstant, False)
 
-    @unittest.skip("FIXME: metadatas of variable")
     def testMetaDataWithClassFields(self):
         '''
         Parse class Fields with metadata
         '''
-        self.builder.addSource(""" 
+        self.builder.addSource("""
         package
         {
             class MyClass
-            { 
+            {
                 [Bindable]
                 mx_internal var name:String;
             }
