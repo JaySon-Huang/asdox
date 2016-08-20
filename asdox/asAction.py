@@ -190,7 +190,7 @@ def parseASVirtualMethod(s, location, tokens):
 
 def parseASMethodBody(s, location, tokens):
     if _isTracing:
-        print('parseASMethodBody @ loc({1})').format(location)
+        print('parseASMethodBody @ loc({0})'.format(location))
     return ParseResults(ASMetodBody(tokens))
 
 
